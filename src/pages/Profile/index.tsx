@@ -1,5 +1,6 @@
 import { AtSign, CircleUserRound, Code2, MapPin, Pencil, Plus } from 'lucide-react'
 import { skills } from '@/data/mockData'
+import './style.css'
 
 export function Profile() {
   return (

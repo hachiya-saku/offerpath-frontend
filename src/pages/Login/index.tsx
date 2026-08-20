@@ -2,6 +2,7 @@ import { ArrowRight, BriefcaseBusiness, ChartNoAxesCombined, Eye, EyeOff, LockKe
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import './style.css'
 
 export function Login() {
   const [visible, setVisible] = useState(false)

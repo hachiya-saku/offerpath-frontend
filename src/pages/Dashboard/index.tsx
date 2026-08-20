@@ -2,6 +2,7 @@ import { ArrowUpRight, BriefcaseBusiness, CalendarClock, CheckCircle2, Target } 
 import ReactECharts from 'echarts-for-react'
 import { useNavigate } from 'react-router-dom'
 import { jobs } from '@/data/mockData'
+import './style.css'
 
 const stats = [
   { label: '追踪岗位', value: '24', detail: '本月新增 6 个', icon: BriefcaseBusiness, tone: 'purple' },

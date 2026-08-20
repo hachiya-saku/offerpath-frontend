@@ -18,6 +18,19 @@ export type Job = {
 
 export const statuses: JobStatus[] = ['想投', '已投', '书类选考', '一面', '二面', '三面', '终面', 'offer', '挂了']
 
+export const recruitmentPlatforms = [
+  'Green',
+  'Wantedly',
+  'LinkedIn',
+  'Indeed',
+  '企业官网',
+  'doda',
+  'マイナビ転職',
+  'リクナビNEXT',
+  'エン転職',
+  '求人ボックス',
+] as const
+
 export const jobs: Job[] = [
   { id: 1, company: 'Layer Nine株式会社', role: 'フロントエンドエンジニア', platform: 'Green', location: '東京都・ハイブリッド', salary: '500万〜750万円', status: '二面', match: 88, updatedAt: '今日 14:20', requiredSkills: ['React', 'TypeScript', 'REST API'], bonusSkills: ['Next.js', 'E2E', 'デザインシステム'], note: 'プロダクトチームとの二次面接。設計判断とチーム開発について準備する。', url: 'https://example.com/jobs/1' },
   { id: 2, company: 'Northstar Labs', role: 'Frontend Developer', platform: 'Wantedly', location: '東京・リモート可', salary: '550万〜800万円', status: '一面', match: 82, updatedAt: '昨日 18:40', requiredSkills: ['React', 'TypeScript', 'CSS'], bonusSkills: ['GraphQL', 'Storybook'], note: 'カジュアル面談済み。開発文化とコードレビューについて確認したい。', url: 'https://example.com/jobs/2' },
