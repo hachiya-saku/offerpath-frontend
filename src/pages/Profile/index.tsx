@@ -1,14 +1,182 @@
-import { AtSign, CircleUserRound, Code2, MapPin, Pencil, Plus } from 'lucide-react'
-import { skills } from '@/data/mockData'
-import './style.css'
+import {
+  AtSign,
+  CircleUserRound,
+  Code2,
+  MapPin,
+  Pencil,
+  Plus,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { skills } from "@/data/mockData";
+
+const skillTones: Record<string, string> = {
+  purple: "bg-[#271d3b] text-[#b89cf6]",
+  blue: "bg-[#19233f] text-[#91a7ff]",
+  green: "bg-[#142c29] text-[#68decf]",
+  pink: "bg-[#321c28] text-[#e8a4c1]",
+  amber: "bg-[#302616] text-[#f2c46e]",
+  cyan: "bg-[#172a2f] text-[#76c9d8]",
+};
+
+const levelTones: Record<string, string> = {
+  熟练: "bg-[#142b27] text-[#68d8c2]",
+  一般: "bg-[#19223a] text-[#93a8ee]",
+  了解: "bg-[#252229] text-[#b0a9b6]",
+};
+
+const profileStats = [
+  ["技能数量", "6"],
+  ["熟练技能", "2"],
+  ["岗位平均匹配", "78%"],
+  ["档案完整度", "86%"],
+];
 
 export function Profile() {
   return (
-    <div className="page-stack">
-      <section className="profile-banner"><div className="profile-avatar-large">HS</div><div><p className="eyebrow">PERSONAL PROFILE</p><h2>Hachiya Saku</h2><p>前端工程师志望。React / TypeScript を中心に学習しています。</p><div className="profile-meta"><span><MapPin size={14} />Tokyo, Japan</span><span><AtSign size={14} />hachiya@example.com</span></div></div><button className="secondary-button" type="button"><Pencil size={16} />编辑资料</button></section>
-      <section className="profile-summary"><div><span>技能数量</span><strong>6</strong></div><div><span>熟练技能</span><strong>2</strong></div><div><span>岗位平均匹配</span><strong>78%</strong></div><div><span>档案完整度</span><strong>86%</strong></div></section>
-      <section className="panel skills-panel"><div className="panel-heading"><div><p className="eyebrow">SKILL INVENTORY</p><h3>我的技术栈</h3><p>匹配度计算将以此处记录的技能为基础。</p></div><button className="primary-button" type="button"><Plus size={16} />添加技能</button></div><div className="skill-table"><div className="skill-table-head"><span>技能</span><span>掌握程度</span><span>学习时间</span><span>权重</span><span /></div>{skills.map(skill => <div className="skill-table-row" key={skill.name}><span className="skill-name"><i className={skill.color}><Code2 size={17} /></i><strong>{skill.name}</strong></span><span><span className={`level-badge level-${skill.level}`}>{skill.level}</span></span><span>{skill.years}</span><span className="weight"><span><i style={{ width: skill.level === '熟练' ? '100%' : skill.level === '一般' ? '60%' : '30%' }} /></span><strong>{skill.level === '熟练' ? '1.0' : skill.level === '一般' ? '0.6' : '0.3'}</strong></span><button className="icon-button" type="button" aria-label={`编辑 ${skill.name}`}><Pencil size={15} /></button></div>)}</div></section>
-      <section className="profile-note"><CircleUserRound size={22} /><div><strong>为什么需要维护技术栈？</strong><p>OfferPath 会根据掌握程度和岗位技能要求计算匹配度，帮助你快速判断准备重点。</p></div></section>
+    <div className="grid gap-6">
+      <section className="flex items-center gap-[18px] rounded-md border border-[#211e25] bg-[#151318] p-[26px] max-[760px]:flex-wrap max-[760px]:items-start">
+        <div className="grid size-[76px] shrink-0 place-items-center rounded-md border border-[#4d3c6b] bg-[#221a35] text-[22px] font-bold text-[#c8b0fc]">
+          HS
+        </div>
+        <div className="flex-1">
+          <p className="m-0 text-[10px] font-bold text-[#786f82]">
+            PERSONAL PROFILE
+          </p>
+          <h2 className="mb-1 mt-2 text-[23px] font-semibold">Hachiya Saku</h2>
+          <p className="text-[13px] text-[#948e9d]">
+            前端工程师志望。React / TypeScript を中心に学習しています。
+          </p>
+          <div className="mt-3 flex gap-[18px] max-[460px]:flex-col max-[460px]:gap-1">
+            <span className="flex items-center gap-1 text-[10px] text-[#6f6977]">
+              <MapPin size={14} />
+              Tokyo, Japan
+            </span>
+            <span className="flex items-center gap-1 text-[10px] text-[#6f6977]">
+              <AtSign size={14} />
+              hachiya@example.com
+            </span>
+          </div>
+        </div>
+        <Button
+          className="h-[38px] rounded-[5px] border-[#2c2831] bg-[#17151a] px-3.5 text-xs text-[#c5bfca] hover:border-[#46404e] hover:bg-[#17151a] hover:text-white max-[760px]:w-full"
+          variant="outline"
+          type="button"
+        >
+          <Pencil size={16} />
+          编辑资料
+        </Button>
+      </section>
+
+      <section className="grid grid-cols-4 overflow-hidden rounded-md border border-[#211e25] max-[760px]:grid-cols-2 max-[460px]:grid-cols-1">
+        {profileStats.map(([label, value]) => (
+          <div
+            className="grid gap-2 border-r border-[#211e25] bg-[#151318] p-[18px] last:border-r-0 max-[760px]:nth-[2]:border-r-0 max-[460px]:border-b max-[460px]:border-r-0"
+            key={label}
+          >
+            <span className="text-[10px] text-[#948e9d]">{label}</span>
+            <strong className="text-xl">{value}</strong>
+          </div>
+        ))}
+      </section>
+
+      <section className="rounded-md border border-[#211e25] bg-[#151318] p-[21px] max-[460px]:p-[17px]">
+        <div className="flex items-start justify-between gap-5">
+          <div>
+            <p className="m-0 text-[10px] font-bold text-[#786f82]">
+              SKILL INVENTORY
+            </p>
+            <h3 className="mt-1 text-[15px] font-semibold">我的技术栈</h3>
+            <p className="mt-1.5 text-xs text-[#948e9d]">
+              匹配度计算将以此处记录的技能为基础。
+            </p>
+          </div>
+          <Button
+            className="h-[38px] rounded-[5px] bg-[#7c3aed] px-3.5 text-xs text-white hover:bg-[#8b4cf0]"
+            type="button"
+          >
+            <Plus size={16} />
+            添加技能
+          </Button>
+        </div>
+
+        <div className="mt-[19px] overflow-x-auto">
+          <div className="grid min-h-9 min-w-[680px] grid-cols-[1.3fr_.8fr_.7fr_1fr_36px] items-center gap-3.5 bg-[#111014] px-3 text-[9px] text-[#6f6977]">
+            <span>技能</span>
+            <span>掌握程度</span>
+            <span>学习时间</span>
+            <span>权重</span>
+            <span />
+          </div>
+          {skills.map((skill) => {
+            const weight =
+              skill.level === "熟练"
+                ? "100%"
+                : skill.level === "一般"
+                  ? "60%"
+                  : "30%";
+            return (
+              <div
+                className="grid min-h-[57px] min-w-[680px] grid-cols-[1.3fr_.8fr_.7fr_1fr_36px] items-center gap-3.5 border-b border-[#211e25] px-3 text-[10px] text-[#948e9d]"
+                key={skill.name}
+              >
+                <span className="flex items-center gap-2.5">
+                  <i
+                    className={`grid size-[29px] place-items-center rounded not-italic ${skillTones[skill.color]}`}
+                  >
+                    <Code2 size={17} />
+                  </i>
+                  <strong className="text-[11px] text-[#f5f2f7]">
+                    {skill.name}
+                  </strong>
+                </span>
+                <span>
+                  <span
+                    className={`rounded px-2 py-1 text-[9px] ${levelTones[skill.level]}`}
+                  >
+                    {skill.level}
+                  </span>
+                </span>
+                <span>{skill.years}</span>
+                <span className="flex items-center gap-2">
+                  <span className="h-[3px] w-[65px] bg-[#2a2630]">
+                    <i
+                      className="block h-full bg-[#8b5cf6]"
+                      style={{ width: weight }}
+                    />
+                  </span>
+                  <strong className="text-[9px] text-[#bbb5c1]">
+                    {skill.level === "熟练"
+                      ? "1.0"
+                      : skill.level === "一般"
+                        ? "0.6"
+                        : "0.3"}
+                  </strong>
+                </span>
+                <Button
+                  className="size-9 border-[#2c2831] text-[#a39ca9] hover:bg-[#1b181f] hover:text-white"
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  aria-label={`编辑 ${skill.name}`}
+                >
+                  <Pencil size={15} />
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="flex items-start gap-3 rounded-[5px] border border-[#2d2840] bg-[#1b1725] p-3.5 text-[#b69bf2]">
+        <CircleUserRound size={22} />
+        <div className="grid gap-0.5">
+          <strong className="text-[11px]">为什么需要维护技术栈？</strong>
+          <p className="m-0 text-[10px] text-[#948e9d]">
+            OfferPath
+            会根据掌握程度和岗位技能要求计算匹配度，帮助你快速判断准备重点。
+          </p>
+        </div>
+      </section>
     </div>
-  )
+  );
 }

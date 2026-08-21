@@ -1,42 +1,13 @@
 :root {
   --bg: #0c0b0e;
-  --sidebar: #111014;
   --surface: #151318;
-  --surface-2: #1b181f;
-  --line: #2c2831;
   --line-soft: #211e25;
-  --text: #f5f2f7;
   --muted: #948e9d;
   --muted-2: #6f6977;
-  --purple: #8b5cf6;
-  --purple-strong: #7c3aed;
-  --purple-soft: #221a35;
   --green: #2dd4bf;
-  --blue: #5b7cfa;
-  --amber: #f2b84b;
-  --danger: #ef6a74;
 }
 
-.eyebrow { margin: 0; color: #786f82; font-size: 10px; font-weight: 700; letter-spacing: 0; }
-.page-stack { display: grid; gap: 24px; }
-.page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; padding-bottom: 4px; }
-.page-heading h2, .detail-hero h2, .profile-banner h2 { margin: 8px 0 5px; color: var(--text); font-size: 27px; line-height: 1.2; font-weight: 600; }
-.page-heading > div > p:last-child, .profile-banner > div > p { color: var(--muted); font-size: 13px; }
-.primary-button, .secondary-button, .danger-button, .login-submit { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 38px; padding: 0 14px; border: 1px solid transparent; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 620; transition: 160ms ease; }
-.primary-button { color: #fff; background: var(--purple-strong); }
-.primary-button:hover { background: #8b4cf0; transform: translateY(-1px); }
-.secondary-button { border-color: var(--line); color: #c5bfca; background: #17151a; }
-.secondary-button:hover { border-color: #46404e; color: #fff; }
-.danger-button { width: 100%; border-color: #4c252d; color: #f08c94; background: #211419; }
-.icon-button { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 1px solid var(--line); border-radius: 5px; color: #a39ca9; background: transparent; cursor: pointer; }
-.icon-button:hover { color: #fff; background: var(--surface-2); }
-.icon-button:disabled { opacity: .35; cursor: default; }
-.text-button, .back-link { display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; color: #a994df; background: none; cursor: pointer; font-size: 11px; text-decoration: none; }
-.text-button:hover, .back-link:hover { color: #d0c0f7; }
-.panel, .form-section, .sticky-panel { border: 1px solid var(--line-soft); border-radius: 6px; background: var(--surface); }
-.panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
-.panel-heading h3, .form-section h3, .sticky-panel h3 { margin: 5px 0 0; font-size: 15px; font-weight: 600; }
-.panel-heading p:last-child { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+/* Shared domain visuals whose color depends on runtime job data. */
 .company-monogram { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 auto; border: 1px solid #37313e; border-radius: 5px; color: #b9a2ed; background: #201b28; font-size: 12px; font-weight: 700; }
 .company-monogram.large { width: 54px; height: 54px; font-size: 18px; }
 .status-badge { display: inline-flex; align-items: center; justify-content: center; width: fit-content; min-width: 50px; min-height: 22px; padding: 2px 7px; border: 1px solid #44355e; border-radius: 3px; color: #c0a8f4; background: #241a34; font-size: 9px; font-style: normal; font-weight: 650; white-space: nowrap; }
@@ -44,19 +15,5 @@
 .status-offer { border-color: #245046; color: #68d8c2; background: #142b27; }
 .status-挂了 { border-color: #4b2c32; color: #d9878e; background: #28181c; }
 .status-已投, .status-书类选考 { border-color: #4c4126; color: #ddbd70; background: #292216; }
-.progress-track, .mini-progress { display: block; height: 4px; overflow: hidden; background: #29252e; }
-.progress-track span, .mini-progress i { display: block; height: 100%; background: var(--purple); }
-.conversion-note, .profile-note, .form-tip { display: flex; align-items: flex-start; gap: 11px; margin-top: auto; padding: 14px; border: 1px solid #2d2840; border-radius: 5px; color: #b69bf2; background: #1b1725; }
-.conversion-note p, .profile-note div, .form-tip p { display: grid; gap: 2px; margin: 0; }
-.conversion-note strong, .profile-note strong, .form-tip strong { font-size: 11px; }
-.conversion-note span, .profile-note p, .form-tip span { color: var(--muted); font-size: 10px; }
-.input-prefix, .input-suffix { display: flex; align-items: center; position: relative; }
-.input-prefix > svg { position: absolute; left: 11px; z-index: 1; color: var(--muted-2); }
-.input-prefix input { padding-left: 36px; }
-.input-prefix button { position: absolute; right: 8px; display: grid; place-items: center; padding: 4px; border: 0; color: var(--muted); background: none; cursor: pointer; }
-.input-suffix span { position: absolute; right: 11px; color: var(--muted); font-size: 10px; }
-
-@media (max-width: 760px) {
-  .page-heading { align-items: flex-start; }
-  .page-heading h2 { font-size: 23px; }
-}
+.mini-progress { display: block; height: 4px; overflow: hidden; background: #29252e; }
+.mini-progress i { display: block; height: 100%; }
