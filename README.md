@@ -1,8 +1,10 @@
-# OfferPath
+# OfferPath Frontend
 
 [日本語](README.md) | [简体中文](README.zh-CN.md) | [English](README.en.md)
 
 OfferPath は、複数の求人サービスや企業サイトに分散した求人情報を一元管理するための求職管理プラットフォームです。応募状況、求人とのスキルマッチ度、選考の進捗を一つのワークスペースで確認できます。
+
+バックエンド: [offerpath-backend](https://github.com/hachiya-saku/offerpath-backend)
 
 現在はフロントエンドの静的プロトタイプを実装しています。今後は NestJS と PostgreSQL を利用した API、認証、データ永続化を追加し、フルスタックの個人開発プロジェクトとして完成させる予定です。
 

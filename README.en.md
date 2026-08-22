@@ -1,8 +1,10 @@
-# OfferPath
+# OfferPath Frontend
 
 [日本語](README.md) | [简体中文](README.zh-CN.md) | [English](README.en.md)
 
 OfferPath is a job application management platform for organizing opportunities scattered across recruiting services and company websites. It brings application status, skill matching, and interview progress into one focused workspace.
+
+Backend repository: [offerpath-backend](https://github.com/hachiya-saku/offerpath-backend)
 
 The project currently provides a static frontend prototype. A NestJS and PostgreSQL backend, authentication, and persistent data will be added as the project develops into a complete full-stack portfolio application.
 
