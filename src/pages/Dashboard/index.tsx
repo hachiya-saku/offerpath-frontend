@@ -10,49 +10,13 @@ import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { jobs } from "@/data/mockData";
-
-const stats = [
-  {
-    label: "追踪岗位",
-    value: "24",
-    detail: "本月新增 6 个",
-    icon: BriefcaseBusiness,
-    tone: "bg-[#281d3e] text-[#b99afc]",
-  },
-  {
-    label: "进行中",
-    value: "8",
-    detail: "3 个等待面试",
-    icon: CalendarClock,
-    tone: "bg-[#19233f] text-[#91a7ff]",
-  },
-  {
-    label: "平均匹配度",
-    value: "78%",
-    detail: "较上周 +4%",
-    icon: Target,
-    tone: "bg-[#142c29] text-[#68decf]",
-  },
-  {
-    label: "收到 Offer",
-    value: "2",
-    detail: "转化率 8.3%",
-    icon: CheckCircle2,
-    tone: "bg-[#302616] text-[#f4ca78]",
-  },
-];
-
-const conversions = [
-  ["已投递", "18", "100%"],
-  ["进入面试", "8", "44%"],
-  ["终面通过", "3", "17%"],
-  ["收到 Offer", "2", "11%"],
-];
+import { useLanguage } from "@/i18n/LanguageContext";
+import { getJobStatusLabel } from "@/i18n/jobLabels";
 const panelClass =
   "rounded-md border border-[#211e25] bg-[#151318] p-[21px] max-[460px]:p-[17px]";
 const eyebrowClass = "m-0 text-[10px] font-bold text-[#786f82]";
 
-const chartOption = {
+const getChartOption = (labels: readonly string[]) => ({
   animation: false,
   backgroundColor: "transparent",
   tooltip: {
@@ -77,38 +41,48 @@ const chartOption = {
       itemStyle: { borderColor: "#111014", borderWidth: 4, borderRadius: 3 },
       label: { show: false },
       data: [
-        { value: 7, name: "计划投递", itemStyle: { color: "#8b5cf6" } },
-        { value: 9, name: "选考中", itemStyle: { color: "#5b7cfa" } },
-        { value: 5, name: "面试中", itemStyle: { color: "#2dd4bf" } },
-        { value: 3, name: "已结束", itemStyle: { color: "#44404b" } },
+        { value: 7, name: labels[0], itemStyle: { color: "#8b5cf6" } },
+        { value: 9, name: labels[1], itemStyle: { color: "#5b7cfa" } },
+        { value: 5, name: labels[2], itemStyle: { color: "#2dd4bf" } },
+        { value: 3, name: labels[3], itemStyle: { color: "#44404b" } },
       ],
     },
   ],
-};
+});
 
 export function Dashboard() {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const text = dashboardCopy[language];
+  const stats = [
+    { label: text.tracked, value: "24", detail: text.added, icon: BriefcaseBusiness, tone: "bg-[#281d3e] text-[#b99afc]" },
+    { label: text.inProgress, value: "8", detail: text.waiting, icon: CalendarClock, tone: "bg-[#19233f] text-[#91a7ff]" },
+    { label: text.averageMatch, value: "78%", detail: text.weekly, icon: Target, tone: "bg-[#142c29] text-[#68decf]" },
+    { label: text.offers, value: "2", detail: text.offerRate, icon: CheckCircle2, tone: "bg-[#302616] text-[#f4ca78]" },
+  ];
+  const conversions = text.conversions;
+  const chartOption = getChartOption(text.chartLabels);
   return (
     <div className="grid gap-6">
       <section className="flex items-end justify-between gap-7 pb-1 max-[760px]:items-start">
         <div>
           <p className={eyebrowClass}>2026 / AUGUST</p>
           <h2 className="mb-1 mt-2 text-[27px] font-semibold max-[760px]:text-[23px]">
-            求职进度一览
+            {text.title}
           </h2>
           <p className="text-[13px] text-[#948e9d]">
-            集中查看当前投递、面试安排与岗位匹配情况。
+            {text.subtitle}
           </p>
         </div>
         <div className="flex items-baseline gap-2 border-l-2 border-[#8b5cf6] bg-[#131116] px-3.5 py-2.5 max-[760px]:hidden">
-          <span className="text-[11px] text-[#948e9d]">距离十月末</span>
-          <strong className="text-[17px]">73 天</strong>
+          <span className="text-[11px] text-[#948e9d]">{text.untilEnd}</span>
+          <strong className="text-[17px]">{text.days}</strong>
         </div>
       </section>
 
       <section
         className="grid grid-cols-4 gap-3 max-[760px]:grid-cols-2 max-[460px]:grid-cols-1"
-        aria-label="核心统计"
+        aria-label={text.coreStats}
       >
         {stats.map(({ label, value, detail, icon: Icon, tone }) => (
           <article
@@ -131,13 +105,13 @@ export function Dashboard() {
 
       <section className="grid grid-cols-[minmax(0,1.25fr)_minmax(340px,.75fr)] gap-4 max-[1050px]:grid-cols-1">
         <div className={panelClass}>
-          <PanelHeading eyebrow="PIPELINE" title="岗位状态分布">
+          <PanelHeading eyebrow="PIPELINE" title={text.distribution}>
             <Button
               className="h-auto p-0 text-[11px] text-[#a994df] hover:bg-transparent hover:text-[#d0c0f7]"
               variant="ghost"
               onClick={() => navigate("/jobs")}
             >
-              查看全部
+              {text.viewAll}
               <ArrowUpRight size={15} />
             </Button>
           </PanelHeading>
@@ -148,9 +122,9 @@ export function Dashboard() {
           />
         </div>
         <div className={`${panelClass} flex flex-col`}>
-          <PanelHeading eyebrow="CONVERSION" title="阶段转化率">
+          <PanelHeading eyebrow="CONVERSION" title={text.conversionTitle}>
             <span className="text-[10px] text-[#2dd4bf] before:mr-1 before:inline-block before:size-[5px] before:rounded-full before:bg-[#2dd4bf] before:content-['']">
-              实时
+              {text.realtime}
             </span>
           </PanelHeading>
           {conversions.map(([label, value, percent]) => (
@@ -176,9 +150,9 @@ export function Dashboard() {
           <div className="mt-auto flex items-start gap-[11px] rounded-[5px] border border-[#2d2840] bg-[#1b1725] p-3.5 text-[#b69bf2]">
             <Target size={18} />
             <p className="m-0 grid gap-0.5">
-              <strong className="text-[11px]">本月目标</strong>
+              <strong className="text-[11px]">{text.monthlyGoal}</strong>
               <span className="text-[10px] text-[#948e9d]">
-                保持 40% 以上的面试转化率
+                {text.goalDetail}
               </span>
             </p>
           </div>
@@ -186,13 +160,13 @@ export function Dashboard() {
       </section>
 
       <section className={panelClass}>
-        <PanelHeading eyebrow="RECENT ACTIVITY" title="最近更新的岗位">
+        <PanelHeading eyebrow="RECENT ACTIVITY" title={text.recent}>
           <Button
             className="h-auto p-0 text-[11px] text-[#a994df] hover:bg-transparent hover:text-[#d0c0f7]"
             variant="ghost"
             onClick={() => navigate("/jobs")}
           >
-            岗位一览
+            {text.jobs}
             <ArrowUpRight size={15} />
           </Button>
         </PanelHeading>
@@ -212,11 +186,11 @@ export function Dashboard() {
                 <small className="text-[10px] text-[#948e9d]">{job.role}</small>
               </span>
               <span className={`status-badge status-${job.status}`}>
-                {job.status}
+                {getJobStatusLabel(job.status, language)}
               </span>
               <span className="grid gap-[3px] max-[460px]:hidden">
                 <strong className="text-xs">{job.match}%</strong>
-                <small className="text-[10px] text-[#948e9d]">匹配度</small>
+                <small className="text-[10px] text-[#948e9d]">{text.match}</small>
               </span>
               <time className="text-[10px] text-[#948e9d] max-[760px]:hidden">
                 {job.updatedAt}
@@ -229,6 +203,23 @@ export function Dashboard() {
     </div>
   );
 }
+
+const dashboardCopy = {
+  ja: {
+    title: "求職活動サマリー", subtitle: "応募状況、面接予定、求人とのマッチ度をまとめて確認できます。", untilEnd: "10月末まで", days: "73日", coreStats: "主要指標",
+    tracked: "管理中の求人", added: "今月 6件追加", inProgress: "選考中", waiting: "面接待ち 3件", averageMatch: "平均マッチ度", weekly: "先週比 +4%", offers: "内定", offerRate: "内定率 8.3%",
+    distribution: "求人ステータス分布", viewAll: "すべて表示", conversionTitle: "選考コンバージョン", realtime: "リアルタイム", monthlyGoal: "今月の目標", goalDetail: "面接移行率 40%以上を維持", recent: "最近更新した求人", jobs: "求人一覧", match: "マッチ度",
+    conversions: [["応募済み", "18", "100%"], ["面接進出", "8", "44%"], ["最終面接通過", "3", "17%"], ["内定", "2", "11%"]],
+    chartLabels: ["応募検討", "選考中", "面接中", "終了"],
+  },
+  zh: {
+    title: "求职进度一览", subtitle: "集中查看当前投递、面试安排与岗位匹配情况。", untilEnd: "距离十月末", days: "73 天", coreStats: "核心统计",
+    tracked: "追踪岗位", added: "本月新增 6 个", inProgress: "进行中", waiting: "3 个等待面试", averageMatch: "平均匹配度", weekly: "较上周 +4%", offers: "收到 Offer", offerRate: "转化率 8.3%",
+    distribution: "岗位状态分布", viewAll: "查看全部", conversionTitle: "阶段转化率", realtime: "实时", monthlyGoal: "本月目标", goalDetail: "保持 40% 以上的面试转化率", recent: "最近更新的岗位", jobs: "岗位一览", match: "匹配度",
+    conversions: [["已投递", "18", "100%"], ["进入面试", "8", "44%"], ["终面通过", "3", "17%"], ["收到 Offer", "2", "11%"]],
+    chartLabels: ["计划投递", "选考中", "面试中", "已结束"],
+  },
+} as const;
 
 function PanelHeading({
   eyebrow,

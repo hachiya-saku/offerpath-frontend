@@ -8,6 +8,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { skills } from "@/data/mockData";
+import { useLanguage } from "@/i18n/LanguageContext";
+import { getExperienceLabel, getSkillLevelLabel } from "@/i18n/jobLabels";
 
 const skillTones: Record<string, string> = {
   purple: "bg-[#271d3b] text-[#b89cf6]",
@@ -24,14 +26,10 @@ const levelTones: Record<string, string> = {
   了解: "bg-[#252229] text-[#b0a9b6]",
 };
 
-const profileStats = [
-  ["技能数量", "6"],
-  ["熟练技能", "2"],
-  ["岗位平均匹配", "78%"],
-  ["档案完整度", "86%"],
-];
-
 export function Profile() {
+  const { language } = useLanguage();
+  const text = profileCopy[language];
+  const profileStats = [[text.skillCount, "6"], [text.strongSkills, "2"], [text.averageMatch, "78%"], [text.completeness, "86%"]];
   return (
     <div className="grid gap-6">
       <section className="flex items-center gap-[18px] rounded-md border border-[#211e25] bg-[#151318] p-[26px] max-[760px]:flex-wrap max-[760px]:items-start">
@@ -44,7 +42,7 @@ export function Profile() {
           </p>
           <h2 className="mb-1 mt-2 text-[23px] font-semibold">Hachiya Saku</h2>
           <p className="text-[13px] text-[#948e9d]">
-            前端工程师志望。React / TypeScript を中心に学習しています。
+            {text.description}
           </p>
           <div className="mt-3 flex gap-[18px] max-[460px]:flex-col max-[460px]:gap-1">
             <span className="flex items-center gap-1 text-[10px] text-[#6f6977]">
@@ -63,7 +61,7 @@ export function Profile() {
           type="button"
         >
           <Pencil size={16} />
-          编辑资料
+          {text.editProfile}
         </Button>
       </section>
 
@@ -85,9 +83,9 @@ export function Profile() {
             <p className="m-0 text-[10px] font-bold text-[#786f82]">
               SKILL INVENTORY
             </p>
-            <h3 className="mt-1 text-[15px] font-semibold">我的技术栈</h3>
+            <h3 className="mt-1 text-[15px] font-semibold">{text.skillProfile}</h3>
             <p className="mt-1.5 text-xs text-[#948e9d]">
-              匹配度计算将以此处记录的技能为基础。
+              {text.skillDescription}
             </p>
           </div>
           <Button
@@ -95,16 +93,16 @@ export function Profile() {
             type="button"
           >
             <Plus size={16} />
-            添加技能
+            {text.addSkill}
           </Button>
         </div>
 
         <div className="mt-[19px] overflow-x-auto">
           <div className="grid min-h-9 min-w-[680px] grid-cols-[1.3fr_.8fr_.7fr_1fr_36px] items-center gap-3.5 bg-[#111014] px-3 text-[9px] text-[#6f6977]">
-            <span>技能</span>
-            <span>掌握程度</span>
-            <span>学习时间</span>
-            <span>权重</span>
+            <span>{text.skill}</span>
+            <span>{text.level}</span>
+            <span>{text.experience}</span>
+            <span>{text.weight}</span>
             <span />
           </div>
           {skills.map((skill) => {
@@ -133,10 +131,10 @@ export function Profile() {
                   <span
                     className={`rounded px-2 py-1 text-[9px] ${levelTones[skill.level]}`}
                   >
-                    {skill.level}
+                    {getSkillLevelLabel(skill.level, language)}
                   </span>
                 </span>
-                <span>{skill.years}</span>
+                <span>{getExperienceLabel(skill.years, language)}</span>
                 <span className="flex items-center gap-2">
                   <span className="h-[3px] w-[65px] bg-[#2a2630]">
                     <i
@@ -157,7 +155,7 @@ export function Profile() {
                   variant="ghost"
                   size="icon"
                   type="button"
-                  aria-label={`编辑 ${skill.name}`}
+                  aria-label={`${text.edit} ${skill.name}`}
                 >
                   <Pencil size={15} />
                 </Button>
@@ -170,13 +168,17 @@ export function Profile() {
       <section className="flex items-start gap-3 rounded-[5px] border border-[#2d2840] bg-[#1b1725] p-3.5 text-[#b69bf2]">
         <CircleUserRound size={22} />
         <div className="grid gap-0.5">
-          <strong className="text-[11px]">为什么需要维护技术栈？</strong>
+          <strong className="text-[11px]">{text.why}</strong>
           <p className="m-0 text-[10px] text-[#948e9d]">
-            OfferPath
-            会根据掌握程度和岗位技能要求计算匹配度，帮助你快速判断准备重点。
+            {text.whyDetail}
           </p>
         </div>
       </section>
     </div>
   );
 }
+
+const profileCopy = {
+  ja: { description: "フロントエンドエンジニア志望。React / TypeScript を中心に学習しています。", editProfile: "プロフィールを編集", skillCount: "スキル数", strongSkills: "得意スキル", averageMatch: "求人平均マッチ度", completeness: "プロフィール完成度", skillProfile: "スキルプロフィール", skillDescription: "ここに登録したスキルをもとに求人とのマッチ度を算出します。", addSkill: "スキルを追加", skill: "スキル", level: "習熟度", experience: "経験期間", weight: "重み", edit: "編集", why: "スキルを管理する理由", whyDetail: "OfferPath は習熟度と求人のスキル要件からマッチ度を算出し、優先して準備すべき内容を見つけやすくします。" },
+  zh: { description: "志望成为前端工程师，主要学习 React / TypeScript。", editProfile: "编辑资料", skillCount: "技能数量", strongSkills: "熟练技能", averageMatch: "岗位平均匹配", completeness: "档案完整度", skillProfile: "我的技术栈", skillDescription: "匹配度计算将以此处记录的技能为基础。", addSkill: "添加技能", skill: "技能", level: "掌握程度", experience: "学习时间", weight: "权重", edit: "编辑", why: "为什么需要维护技术栈？", whyDetail: "OfferPath 会根据掌握程度和岗位技能要求计算匹配度，帮助你快速判断准备重点。" },
+} as const;

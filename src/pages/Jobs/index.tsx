@@ -9,9 +9,11 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { jobs, recruitmentPlatforms, statuses } from "@/data/mockData";
+import { useLanguage } from "@/i18n/LanguageContext";
+import { getJobStatusLabel } from "@/i18n/jobLabels";
 import "./style.css";
 
 const filterLabelClass =
@@ -21,11 +23,7 @@ const advancedLabelClass =
 const selectClass =
   "min-w-0 flex-1 border-0 bg-transparent text-[11px] text-[#cfcad3] outline-none";
 
-const ALL_STATUSES = "全部状态";
-const ALL_PLATFORMS = "全部平台";
-const ALL_REQUIRED_SKILLS = "全部必须技能";
-const ALL_BONUS_SKILLS = "全部加分技能";
-const ALL_LOCATIONS = "全部地点";
+const ALL = "ALL";
 
 type SortMode = "newest" | "oldest" | "match" | "salary";
 
@@ -36,12 +34,15 @@ const getSalaryRange = (salary: string) => {
 
 export function Jobs() {
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState(ALL_STATUSES);
-  const [platform, setPlatform] = useState(ALL_PLATFORMS);
-  const [requiredSkill, setRequiredSkill] = useState(ALL_REQUIRED_SKILLS);
-  const [bonusSkill, setBonusSkill] = useState(ALL_BONUS_SKILLS);
-  const [location, setLocation] = useState(ALL_LOCATIONS);
+  const { language } = useLanguage();
+  const text = jobsCopy[language];
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("company") ?? "");
+  const [status, setStatus] = useState(ALL);
+  const [platform, setPlatform] = useState(ALL);
+  const [requiredSkill, setRequiredSkill] = useState(ALL);
+  const [bonusSkill, setBonusSkill] = useState(ALL);
+  const [location, setLocation] = useState(ALL);
   const [salaryMin, setSalaryMin] = useState("");
   const [salaryMax, setSalaryMax] = useState("");
   const [minimumMatch, setMinimumMatch] = useState("0");
@@ -83,13 +84,13 @@ export function Jobs() {
 
           return (
             matchesQuery &&
-            (status === ALL_STATUSES || job.status === status) &&
-            (platform === ALL_PLATFORMS || job.platform === platform) &&
-            (requiredSkill === ALL_REQUIRED_SKILLS ||
+            (status === ALL || job.status === status) &&
+            (platform === ALL || job.platform === platform) &&
+            (requiredSkill === ALL ||
               job.requiredSkills.includes(requiredSkill)) &&
-            (bonusSkill === ALL_BONUS_SKILLS ||
+            (bonusSkill === ALL ||
               job.bonusSkills.includes(bonusSkill)) &&
-            (location === ALL_LOCATIONS || job.location === location) &&
+            (location === ALL || job.location === location) &&
             job.match >= Number(minimumMatch) &&
             matchesSalary
           );
@@ -120,11 +121,11 @@ export function Jobs() {
 
   const resetFilters = () => {
     setQuery("");
-    setStatus(ALL_STATUSES);
-    setPlatform(ALL_PLATFORMS);
-    setRequiredSkill(ALL_REQUIRED_SKILLS);
-    setBonusSkill(ALL_BONUS_SKILLS);
-    setLocation(ALL_LOCATIONS);
+    setStatus(ALL);
+    setPlatform(ALL);
+    setRequiredSkill(ALL);
+    setBonusSkill(ALL);
+    setLocation(ALL);
     setSalaryMin("");
     setSalaryMax("");
     setMinimumMatch("0");
@@ -139,23 +140,23 @@ export function Jobs() {
             JOB DATABASE
           </p>
           <h2 className="mb-1 mt-2 text-[27px] font-semibold max-[760px]:text-[23px]">
-            所有岗位
+            {text.title}
           </h2>
           <p className="text-[13px] text-[#948e9d]">
-            筛选、比较并持续维护你的求职机会。
+            {text.subtitle}
           </p>
         </div>
         <div className="flex items-baseline gap-2 border-l-2 border-[#8b5cf6] bg-[#131116] px-3.5 py-2.5 max-[760px]:hidden">
           <strong className="text-[22px] text-[#c9b6ff]">
             {filtered.length}
           </strong>
-          <span className="text-[11px] text-[#948e9d]">条结果</span>
+          <span className="text-[11px] text-[#948e9d]">{text.results}</span>
         </div>
       </section>
 
       <section
         className="overflow-hidden rounded-md border border-[#211e25] bg-[#151318]"
-        aria-label="岗位筛选"
+        aria-label={text.filters}
       >
         <div className="flex items-center gap-2 border-b border-[#211e25] p-3 max-[760px]:flex-wrap">
           <label
@@ -166,7 +167,7 @@ export function Jobs() {
               className="min-w-0 flex-1 border-0 bg-transparent text-[11px] text-[#cfcad3] outline-none"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="搜索公司或岗位"
+              placeholder={text.search}
             />
           </label>
           <label
@@ -178,9 +179,9 @@ export function Jobs() {
               value={status}
               onChange={(event) => setStatus(event.target.value)}
             >
-              <option>{ALL_STATUSES}</option>
+              <option value={ALL}>{text.allStatuses}</option>
               {statuses.map((item) => (
-                <option key={item}>{item}</option>
+                <option key={item} value={item}>{getJobStatusLabel(item, language)}</option>
               ))}
             </select>
           </label>
@@ -192,7 +193,7 @@ export function Jobs() {
               value={platform}
               onChange={(event) => setPlatform(event.target.value)}
             >
-              <option>{ALL_PLATFORMS}</option>
+              <option value={ALL}>{text.allPlatforms}</option>
               {platformOptions.map((item) => (
                 <option key={item}>{item}</option>
               ))}
@@ -207,10 +208,10 @@ export function Jobs() {
               value={sortMode}
               onChange={(event) => setSortMode(event.target.value as SortMode)}
             >
-              <option value="newest">最近更新</option>
-              <option value="oldest">最早更新</option>
-              <option value="match">匹配度最高</option>
-              <option value="salary">薪资最高</option>
+              <option value="newest">{text.newest}</option>
+              <option value="oldest">{text.oldest}</option>
+              <option value="match">{text.highestMatch}</option>
+              <option value="salary">{text.highestSalary}</option>
             </select>
           </label>
         </div>
@@ -219,77 +220,77 @@ export function Jobs() {
             className={`${advancedLabelClass} max-[760px]:col-span-full max-[460px]:col-auto`}
           >
             <Banknote size={16} />
-            <span className="shrink-0 text-[#6f6977]">年薪</span>
+            <span className="shrink-0 text-[#6f6977]">{text.annualSalary}</span>
             <input
               className="w-[58px] min-w-0 flex-1 border-0 bg-transparent text-center text-[11px] text-[#cfcad3] outline-none"
               type="number"
               min="0"
               value={salaryMin}
               onChange={(event) => setSalaryMin(event.target.value)}
-              placeholder="最低"
+              placeholder={text.minimum}
             />
-            <i className="text-[9px] not-italic text-[#6f6977]">至</i>
+            <i className="text-[9px] not-italic text-[#6f6977]">{text.to}</i>
             <input
               className="w-[58px] min-w-0 flex-1 border-0 bg-transparent text-center text-[11px] text-[#cfcad3] outline-none"
               type="number"
               min="0"
               value={salaryMax}
               onChange={(event) => setSalaryMax(event.target.value)}
-              placeholder="最高"
+              placeholder={text.maximum}
             />
             <em className="text-[9px] not-italic text-[#6f6977]">万円</em>
           </label>
           <label className={advancedLabelClass}>
-            <span className="shrink-0 text-[#6f6977]">必须技能</span>
+            <span className="shrink-0 text-[#6f6977]">{text.requiredSkill}</span>
             <select
               className={selectClass}
               value={requiredSkill}
               onChange={(event) => setRequiredSkill(event.target.value)}
             >
-              <option>{ALL_REQUIRED_SKILLS}</option>
+              <option value={ALL}>{text.allRequiredSkills}</option>
               {requiredSkills.map((item) => (
                 <option key={item}>{item}</option>
               ))}
             </select>
           </label>
           <label className={advancedLabelClass}>
-            <span className="shrink-0 text-[#6f6977]">加分技能</span>
+            <span className="shrink-0 text-[#6f6977]">{text.bonusSkill}</span>
             <select
               className={selectClass}
               value={bonusSkill}
               onChange={(event) => setBonusSkill(event.target.value)}
             >
-              <option>{ALL_BONUS_SKILLS}</option>
+              <option value={ALL}>{text.allBonusSkills}</option>
               {bonusSkills.map((item) => (
                 <option key={item}>{item}</option>
               ))}
             </select>
           </label>
           <label className={advancedLabelClass}>
-            <span className="shrink-0 text-[#6f6977]">工作地点</span>
+            <span className="shrink-0 text-[#6f6977]">{text.location}</span>
             <select
               className={selectClass}
               value={location}
               onChange={(event) => setLocation(event.target.value)}
             >
-              <option>{ALL_LOCATIONS}</option>
+              <option value={ALL}>{text.allLocations}</option>
               {locations.map((item) => (
                 <option key={item}>{item}</option>
               ))}
             </select>
           </label>
           <label className={advancedLabelClass}>
-            <span className="shrink-0 text-[#6f6977]">最低匹配度</span>
+            <span className="shrink-0 text-[#6f6977]">{text.minimumMatch}</span>
             <select
               className={selectClass}
               value={minimumMatch}
               onChange={(event) => setMinimumMatch(event.target.value)}
             >
-              <option value="0">不限</option>
-              <option value="60">60% 以上</option>
-              <option value="70">70% 以上</option>
-              <option value="80">80% 以上</option>
-              <option value="90">90% 以上</option>
+              <option value="0">{text.unlimited}</option>
+              <option value="60">60% {text.orMore}</option>
+              <option value="70">70% {text.orMore}</option>
+              <option value="80">80% {text.orMore}</option>
+              <option value="90">90% {text.orMore}</option>
             </select>
           </label>
           <Button
@@ -300,18 +301,18 @@ export function Jobs() {
             onClick={resetFilters}
           >
             <RotateCcw size={14} />
-            重置
+            {text.reset}
           </Button>
         </div>
       </section>
 
-      <section className="jobs-list" aria-label="岗位列表">
+      <section className="jobs-list" aria-label={text.list}>
         <div className="jobs-list-head">
-          <span>公司 / 岗位</span>
-          <span>平台</span>
-          <span>状态</span>
-          <span>匹配度</span>
-          <span>更新时间</span>
+          <span>{text.companyJob}</span>
+          <span>{text.platform}</span>
+          <span>{text.status}</span>
+          <span>{text.match}</span>
+          <span>{text.updatedAt}</span>
           <span />
         </div>
         {filtered.map((job) => (
@@ -343,7 +344,7 @@ export function Jobs() {
             <span className="platform-name">{job.platform}</span>
             <span>
               <span className={`status-badge status-${job.status}`}>
-                {job.status}
+                {getJobStatusLabel(job.status, language)}
               </span>
             </span>
             <span className="match-cell">
@@ -360,9 +361,9 @@ export function Jobs() {
           <div className="grid min-h-60 place-items-center gap-[7px] text-[#6f6977]">
             <Search size={24} />
             <strong className="text-[13px] text-[#c7c1cb]">
-              没有符合条件的岗位
+              {text.empty}
             </strong>
-            <span className="text-[11px]">尝试调整关键词或筛选条件。</span>
+            <span className="text-[11px]">{text.emptyHint}</span>
             <Button
               className="h-[38px] text-[10px] text-[#968ba0] hover:bg-transparent hover:text-[#d6c9f4]"
               variant="ghost"
@@ -371,13 +372,13 @@ export function Jobs() {
               onClick={resetFilters}
             >
               <RotateCcw size={14} />
-              清除全部筛选
+              {text.clearFilters}
             </Button>
           </div>
         )}
       </section>
       <div className="flex items-center justify-between text-[10px] text-[#6f6977]">
-        <span>第 1 页，共 1 页</span>
+        <span>{text.pagination}</span>
         <div className="flex gap-1">
           <Button
             className="size-9 border-[#2c2831] text-[#a39ca9]"
@@ -407,3 +408,8 @@ export function Jobs() {
     </div>
   );
 }
+
+const jobsCopy = {
+  ja: { title: "求人一覧", subtitle: "求人情報を絞り込み、比較しながら継続的に管理できます。", results: "件", filters: "求人フィルター", search: "企業名・職種名を検索", allStatuses: "すべてのステータス", allPlatforms: "すべての媒体", newest: "更新が新しい順", oldest: "更新が古い順", highestMatch: "マッチ度が高い順", highestSalary: "給与が高い順", annualSalary: "年収", minimum: "最低", to: "〜", maximum: "最高", requiredSkill: "必須スキル", allRequiredSkills: "すべての必須スキル", bonusSkill: "歓迎スキル", allBonusSkills: "すべての歓迎スキル", location: "勤務地", allLocations: "すべての勤務地", minimumMatch: "最低マッチ度", unlimited: "指定なし", orMore: "以上", reset: "リセット", list: "求人一覧", companyJob: "企業 / 求人", platform: "求人媒体", status: "ステータス", match: "マッチ度", updatedAt: "更新日時", empty: "条件に一致する求人がありません", emptyHint: "キーワードや絞り込み条件を変更してください。", clearFilters: "フィルターをクリア", pagination: "1 / 1 ページ" },
+  zh: { title: "所有岗位", subtitle: "筛选、比较并持续维护你的求职机会。", results: "条结果", filters: "岗位筛选", search: "搜索公司或岗位", allStatuses: "全部状态", allPlatforms: "全部平台", newest: "最近更新", oldest: "最早更新", highestMatch: "匹配度最高", highestSalary: "薪资最高", annualSalary: "年薪", minimum: "最低", to: "至", maximum: "最高", requiredSkill: "必须技能", allRequiredSkills: "全部必须技能", bonusSkill: "加分技能", allBonusSkills: "全部加分技能", location: "工作地点", allLocations: "全部地点", minimumMatch: "最低匹配度", unlimited: "不限", orMore: "以上", reset: "重置", list: "岗位列表", companyJob: "公司 / 岗位", platform: "平台", status: "状态", match: "匹配度", updatedAt: "更新时间", empty: "没有符合条件的岗位", emptyHint: "尝试调整关键词或筛选条件。", clearFilters: "清除全部筛选", pagination: "第 1 页，共 1 页" },
+} as const;

@@ -11,6 +11,8 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { useLanguage } from "@/i18n/LanguageContext";
 import "./style.css";
 
 const inputClass =
@@ -18,6 +20,12 @@ const inputClass =
 
 export function Login() {
   const [visible, setVisible] = useState(false);
+  const { language } = useLanguage();
+  const text = language === "ja" ? {
+    headline: "一つひとつの機会を、\n次の一歩につなげる。", description: "求人、応募状況、スキルマッチを一元管理し、選考準備に集中できる環境をつくります。", tracked: "管理中の求人", average: "平均マッチ度", welcome: "おかえりなさい", loginHint: "求職活動の続きを始めましょう。", account: "メールアドレス", accountPlaceholder: "メールアドレスを入力", password: "パスワード", passwordPlaceholder: "パスワードを入力", keep: "ログイン状態を保持", forgot: "パスワードを忘れた場合", submit: "OfferPath を開く", demo: "デモアカウントで静的画面を確認できます。", show: "パスワードを表示", hide: "パスワードを隠す",
+  } : {
+    headline: "把每一次机会，\n变成清晰的路径。", description: "统一管理岗位、投递状态与技能匹配，把精力留给真正重要的准备。", tracked: "追踪岗位", average: "平均匹配度", welcome: "登录工作区", loginHint: "继续管理你的求职进度。", account: "邮箱", accountPlaceholder: "输入邮箱", password: "密码", passwordPlaceholder: "输入密码", keep: "保持登录", forgot: "忘记密码？", submit: "进入 OfferPath", demo: "可使用演示账号查看静态页面。", show: "显示密码", hide: "隐藏密码",
+  };
   const navigate = useNavigate();
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -25,7 +33,8 @@ export function Login() {
   };
 
   return (
-    <main className="grid min-h-screen grid-cols-[minmax(420px,1.05fr)_minmax(440px,.95fr)] bg-[#0c0b0e] max-[1050px]:grid-cols-1">
+    <main className="relative grid min-h-screen grid-cols-[minmax(420px,1.05fr)_minmax(440px,.95fr)] bg-[#0c0b0e] max-[1050px]:grid-cols-1">
+      <div className="absolute right-6 top-6 z-20"><LanguageToggle /></div>
       <section className="login-brand-panel relative flex min-h-screen flex-col justify-between overflow-hidden border-r border-[#211e25] bg-[#111014] px-14 py-10 max-[1050px]:hidden">
         <div className="z-10 flex items-center gap-2.5">
           <span className="grid size-9 place-items-center rounded-[5px] border border-[#684a96] bg-[#221a35] text-[11px] font-bold text-[#c5aafa]">
@@ -37,13 +46,9 @@ export function Login() {
           <p className="m-0 text-[10px] font-bold text-[#786f82]">
             YOUR CAREER, ORGANIZED.
           </p>
-          <h1 className="my-4 text-[clamp(34px,4vw,58px)] font-medium leading-[1.12]">
-            把每一次机会，
-            <br />
-            变成清晰的路径。
-          </h1>
+          <h1 className="my-4 whitespace-pre-line text-[clamp(34px,4vw,58px)] font-medium leading-[1.12]">{text.headline}</h1>
           <p className="max-w-[480px] text-sm leading-7 text-[#948e9d]">
-            统一管理岗位、投递状态与技能匹配，把精力留给真正重要的准备。
+            {text.description}
           </p>
         </div>
         <div className="z-10 grid max-w-[500px] grid-cols-2 rounded-md border border-[#2c2831] bg-[#151319]">
@@ -52,7 +57,7 @@ export function Login() {
               className="row-span-2 text-[#a486e5]"
               size={19}
             />
-            <span className="text-[10px] text-[#948e9d]">追踪岗位</span>
+            <span className="text-[10px] text-[#948e9d]">{text.tracked}</span>
             <strong className="text-lg">24</strong>
           </div>
           <div className="grid grid-cols-[28px_1fr] gap-1 p-[18px]">
@@ -60,7 +65,7 @@ export function Login() {
               className="row-span-2 text-[#a486e5]"
               size={19}
             />
-            <span className="text-[10px] text-[#948e9d]">平均匹配度</span>
+            <span className="text-[10px] text-[#948e9d]">{text.average}</span>
             <strong className="text-lg">78%</strong>
           </div>
         </div>
@@ -81,23 +86,23 @@ export function Login() {
             <p className="m-0 text-[10px] font-bold text-[#786f82]">
               WELCOME BACK
             </p>
-            <h2 className="mb-1 mt-2 text-[27px]">登录工作区</h2>
-            <p className="text-xs text-[#948e9d]">继续管理你的求职进度。</p>
+            <h2 className="mb-1 mt-2 text-[27px]">{text.welcome}</h2>
+            <p className="text-xs text-[#948e9d]">{text.loginHint}</p>
           </div>
           <label className="grid gap-2 text-[10px] text-[#bcb6c2]">
-            <span>用户名</span>
+            <span>{text.account}</span>
             <div className="relative flex items-center">
               <UserRound className="absolute left-3 text-[#6f6977]" size={16} />
               <input
                 className={inputClass}
                 required
-                defaultValue="hachiya-saku"
-                placeholder="输入用户名"
+                defaultValue="demo@offerpath.local"
+                placeholder={text.accountPlaceholder}
               />
             </div>
           </label>
           <label className="grid gap-2 text-[10px] text-[#bcb6c2]">
-            <span>密码</span>
+            <span>{text.password}</span>
             <div className="relative flex items-center">
               <LockKeyhole
                 className="absolute left-3 text-[#6f6977]"
@@ -108,13 +113,13 @@ export function Login() {
                 required
                 type={visible ? "text" : "password"}
                 defaultValue="offerpath2026"
-                placeholder="输入密码"
+                placeholder={text.passwordPlaceholder}
               />
               <button
                 className="absolute right-2 grid p-1 text-[#948e9d]"
                 type="button"
                 onClick={() => setVisible(!visible)}
-                aria-label={visible ? "隐藏密码" : "显示密码"}
+                aria-label={visible ? text.hide : text.show}
               >
                 {visible ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -127,21 +132,21 @@ export function Login() {
                 type="checkbox"
                 defaultChecked
               />
-              保持登录
+              {text.keep}
             </label>
             <button className="text-[10px] text-[#a994df]" type="button">
-              忘记密码？
+              {text.forgot}
             </button>
           </div>
           <Button
             className="h-[45px] rounded-[5px] bg-[#7c3aed] text-white hover:bg-[#8b4cf0]"
             type="submit"
           >
-            进入 OfferPath
+            {text.submit}
             <ArrowRight size={17} />
           </Button>
           <p className="m-0 text-center text-[9px] text-[#6f6977]">
-            演示账号已自动填入，直接登录即可查看静态页面。
+            {text.demo}
           </p>
         </form>
       </section>
