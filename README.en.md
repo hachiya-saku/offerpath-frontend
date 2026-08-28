@@ -6,7 +6,7 @@ OfferPath is a job application management platform for organizing opportunities 
 
 Backend repository: [offerpath-backend](https://github.com/hachiya-saku/offerpath-backend)
 
-The project currently provides a static frontend prototype. A NestJS and PostgreSQL backend, authentication, and persistent data will be added as the project develops into a complete full-stack portfolio application.
+The main frontend screens and a NestJS / PostgreSQL backend API are now being developed in parallel. Japanese is the default interface language, with persistent Chinese language switching also available.
 
 ## Problems it addresses
 
@@ -21,9 +21,12 @@ The project currently provides a static frontend prototype. A NestJS and Postgre
 - Dashboard for tracked jobs, active processes, and average match score
 - Job status visualization powered by ECharts
 - Job list with keyword, status, and platform filters
-- New job form with interactive skill tags
+- Job form covering annual, monthly, and hourly pay, fixed overtime, employment type, and work mode
+- Structured recruitment content for responsibilities, qualifications, selection process, benefits, and more
 - Job detail page with skill analysis and a status timeline
+- Company directory, search, company detail, and related job views
 - Personal profile and technical skill inventory
+- Japanese / Chinese language switching with persisted preferences
 - Desktop sidebar and mobile drawer navigation
 - Responsive dark interface
 
@@ -51,8 +54,8 @@ Because recruitment processes differ between companies, the final product will a
 | Charts | ECharts |
 | HTTP client | Axios |
 | Static analysis | Oxlint |
-| Backend (planned) | NestJS |
-| Database (planned) | PostgreSQL |
+| Backend | NestJS, Prisma ORM |
+| Database | PostgreSQL |
 | Deployment (planned) | Docker Compose |
 
 ## Routes
@@ -63,14 +66,16 @@ Because recruitment processes differ between companies, the final product will a
 /jobs        Job list
 /jobs/new    New job
 /jobs/:id    Job detail
+/companies   Company directory
+/companies/:id Company detail
 /profile     Skill profile
 ```
 
 ## Roadmap
 
-1. NestJS and PostgreSQL backend foundation
+1. Connect the frontend to the existing NestJS / PostgreSQL APIs
 2. Registration, login, JWT authentication, and per-user data isolation
-3. Job CRUD, filtering, sorting, and pagination
+3. Complete job and company APIs, filtering, sorting, and pagination
 4. Application status history
 5. Personal skill management and weighted match scoring
 6. Dashboard aggregation APIs and conversion metrics
@@ -96,4 +101,4 @@ npm run preview  # Preview the production build
 
 ## Project status
 
-The first static frontend prototype is complete. The next phase is to confirm the interface design and define the backend data model and API contracts.
+The main static screens and responsive layouts are complete. Current work focuses on completing the backend APIs and replacing sample content with persisted data.
