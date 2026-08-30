@@ -17,12 +17,13 @@ import { getJobStatusLabel } from "@/i18n/jobLabels";
 import { InterviewScheduleDialog } from "@/components/InterviewScheduleDialog";
 import { getStoredJobStatus } from "@/data/interviewStore";
 
-const nextInterviewStatus: Partial<Record<JobStatus, JobStatus>> = {
-  书类选考: "一面",
-  一面: "二面",
-  二面: "三面",
-  三面: "终面",
-};
+const interviewStatuses: JobStatus[] = ["一面", "二面", "三面", "终面"];
+
+function getAvailableInterviewStatuses(status: JobStatus) {
+  if (status === "书类选考") return interviewStatuses;
+  const currentIndex = interviewStatuses.indexOf(status);
+  return currentIndex === -1 ? [] : interviewStatuses.slice(currentIndex + 1);
+}
 
 const panelClass =
   "rounded-md border border-[#211e25] bg-[#151318] p-[21px] max-[460px]:p-[17px]";
@@ -38,7 +39,7 @@ export function JobDetail() {
     getStoredJobStatus(job.id, job.status),
   );
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const nextStatus = nextInterviewStatus[currentStatus];
+  const availableStatuses = getAvailableInterviewStatuses(currentStatus);
   return (
     <div className="grid gap-6">
       <section className="border-b border-[#211e25] pb-[22px] pt-1">
@@ -91,7 +92,7 @@ export function JobDetail() {
             <strong className={`status-badge status-${currentStatus}`}>
               {getJobStatusLabel(currentStatus, language)}
             </strong>
-            {nextStatus && <button type="button" className="mt-1 flex w-fit items-center gap-1 border-0 bg-transparent p-0 text-[9px] text-[#b69bf2] hover:text-[#d6c9f4]" onClick={() => setScheduleOpen(true)}><CalendarPlus size={13} />{text.schedule} {getJobStatusLabel(nextStatus, language)}</button>}
+            {availableStatuses.length > 0 && <button type="button" className="mt-1 flex w-fit items-center gap-1 border-0 bg-transparent p-0 text-[9px] text-[#b69bf2] hover:text-[#d6c9f4]" onClick={() => setScheduleOpen(true)}><CalendarPlus size={13} />{text.schedule}</button>}
           </div>
           <div className="grid gap-2 bg-[#0c0b0e] p-[15px]">
             <span className="text-[9px] text-[#6f6977]">{text.skillMatch}</span>
@@ -226,10 +227,10 @@ export function JobDetail() {
           </Button>
         </aside>
       </div>
-      {scheduleOpen && nextStatus && (
+      {scheduleOpen && availableStatuses.length > 0 && (
         <InterviewScheduleDialog
           job={job}
-          nextStatus={nextStatus}
+          availableStatuses={availableStatuses}
           onClose={() => setScheduleOpen(false)}
           onSaved={(status) => {
             setCurrentStatus(status);
