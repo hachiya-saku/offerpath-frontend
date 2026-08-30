@@ -24,6 +24,8 @@ The main frontend screens and a NestJS / PostgreSQL backend API are now being de
 - Job form covering annual, monthly, and hourly pay, fixed overtime, employment type, and work mode
 - Structured recruitment content for responsibilities, qualifications, selection process, benefits, and more
 - Job detail page with skill analysis and a status timeline
+- Online / in-person interview scheduling linked to job status progression
+- Interview management with meeting details and Google Maps venue lookup
 - Company directory, search, company detail, and related job views
 - Personal profile and technical skill inventory
 - Japanese / Chinese language switching with persisted preferences
@@ -68,6 +70,7 @@ Because recruitment processes differ between companies, the final product will a
 /jobs/:id    Job detail
 /companies   Company directory
 /companies/:id Company detail
+/interviews  Interview management
 /profile     Skill profile
 ```
 

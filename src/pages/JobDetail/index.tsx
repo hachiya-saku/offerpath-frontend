@@ -1,17 +1,28 @@
 import {
   ArrowLeft,
   CalendarDays,
+  CalendarPlus,
   ExternalLink,
   MapPin,
   MoreHorizontal,
   Pencil,
   Trash2,
 } from "lucide-react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { jobs, statuses } from "@/data/mockData";
+import { jobs, statuses, type JobStatus } from "@/data/mockData";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getJobStatusLabel } from "@/i18n/jobLabels";
+import { InterviewScheduleDialog } from "@/components/InterviewScheduleDialog";
+import { getStoredJobStatus } from "@/data/interviewStore";
+
+const nextInterviewStatus: Partial<Record<JobStatus, JobStatus>> = {
+  书类选考: "一面",
+  一面: "二面",
+  二面: "三面",
+  三面: "终面",
+};
 
 const panelClass =
   "rounded-md border border-[#211e25] bg-[#151318] p-[21px] max-[460px]:p-[17px]";
@@ -23,6 +34,11 @@ export function JobDetail() {
   const text = detailCopy[language];
   const { id } = useParams();
   const job = jobs.find((item) => item.id === Number(id)) ?? jobs[0];
+  const [currentStatus, setCurrentStatus] = useState<JobStatus>(() =>
+    getStoredJobStatus(job.id, job.status),
+  );
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const nextStatus = nextInterviewStatus[currentStatus];
   return (
     <div className="grid gap-6">
       <section className="border-b border-[#211e25] pb-[22px] pt-1">
@@ -72,9 +88,10 @@ export function JobDetail() {
         <div className="mt-6 grid grid-cols-4 gap-px bg-[#211e25] max-[760px]:grid-cols-2">
           <div className="grid gap-2 bg-[#0c0b0e] p-[15px]">
             <span className="text-[9px] text-[#6f6977]">{text.currentStatus}</span>
-            <strong className={`status-badge status-${job.status}`}>
-              {getJobStatusLabel(job.status, language)}
+            <strong className={`status-badge status-${currentStatus}`}>
+              {getJobStatusLabel(currentStatus, language)}
             </strong>
+            {nextStatus && <button type="button" className="mt-1 flex w-fit items-center gap-1 border-0 bg-transparent p-0 text-[9px] text-[#b69bf2] hover:text-[#d6c9f4]" onClick={() => setScheduleOpen(true)}><CalendarPlus size={13} />{text.schedule} {getJobStatusLabel(nextStatus, language)}</button>}
           </div>
           <div className="grid gap-2 bg-[#0c0b0e] p-[15px]">
             <span className="text-[9px] text-[#6f6977]">{text.skillMatch}</span>
@@ -209,11 +226,22 @@ export function JobDetail() {
           </Button>
         </aside>
       </div>
+      {scheduleOpen && nextStatus && (
+        <InterviewScheduleDialog
+          job={job}
+          nextStatus={nextStatus}
+          onClose={() => setScheduleOpen(false)}
+          onSaved={(status) => {
+            setCurrentStatus(status);
+            setScheduleOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
 
 const detailCopy = {
-  ja: { jobs: "求人一覧", edit: "編集", more: "その他の操作", currentStatus: "現在のステータス", skillMatch: "スキルマッチ度", salary: "給与範囲", updatedAt: "最終更新", analysis: "スキルマッチ分析", requiredSkills: "必須スキル", bonusSkills: "歓迎スキル", notes: "求人メモ", source: "求人情報元", timeline: "ステータス履歴", waiting: "待機中", deleteJob: "この求人を削除", month: "月", day: "日" },
-  zh: { jobs: "岗位一览", edit: "编辑", more: "更多操作", currentStatus: "当前状态", skillMatch: "技能匹配度", salary: "薪资范围", updatedAt: "最后更新", analysis: "技能匹配分析", requiredSkills: "必须技能", bonusSkills: "加分技能", notes: "岗位备注", source: "岗位来源", timeline: "状态记录", waiting: "等待中", deleteJob: "删除这个岗位", month: "月", day: "日" },
+  ja: { jobs: "求人一覧", edit: "編集", more: "その他の操作", currentStatus: "現在のステータス", schedule: "設定:", skillMatch: "スキルマッチ度", salary: "給与範囲", updatedAt: "最終更新", analysis: "スキルマッチ分析", requiredSkills: "必須スキル", bonusSkills: "歓迎スキル", notes: "求人メモ", source: "求人情報元", timeline: "ステータス履歴", waiting: "待機中", deleteJob: "この求人を削除", month: "月", day: "日" },
+  zh: { jobs: "岗位一览", edit: "编辑", more: "更多操作", currentStatus: "当前状态", schedule: "安排", skillMatch: "技能匹配度", salary: "薪资范围", updatedAt: "最后更新", analysis: "技能匹配分析", requiredSkills: "必须技能", bonusSkills: "加分技能", notes: "岗位备注", source: "岗位来源", timeline: "状态记录", waiting: "等待中", deleteJob: "删除这个岗位", month: "月", day: "日" },
 } as const;

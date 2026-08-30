@@ -8,6 +8,7 @@ import { JobForm } from '@/pages/JobForm'
 import { Jobs } from '@/pages/Jobs'
 import { Login } from '@/pages/Login'
 import { Profile } from '@/pages/Profile'
+import { Interviews } from '@/pages/Interviews'
 import './App.css'
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
           <Route path="/jobs/:id" element={<JobDetail />} />
           <Route path="/companies" element={<Companies />} />
           <Route path="/companies/:id" element={<CompanyDetail />} />
+          <Route path="/interviews" element={<Interviews />} />
           <Route path="/profile" element={<Profile />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

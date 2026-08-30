@@ -1,4 +1,4 @@
-import { BriefcaseBusiness, Building2, ChevronRight, CircleUserRound, LayoutDashboard, LogOut, Menu, Plus, Search, UserRoundCog, X } from 'lucide-react'
+import { BriefcaseBusiness, Building2, CalendarDays, ChevronRight, CircleUserRound, LayoutDashboard, LogOut, Menu, Plus, Search, UserRoundCog, X } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -7,10 +7,10 @@ import { useLanguage } from '@/i18n/LanguageContext'
 
 const shellCopy = {
   ja: {
-    dashboard: 'ダッシュボード', jobs: '求人一覧', companies: '企業一覧', companyDetail: '企業詳細', newJob: '求人登録', profile: 'スキルプロフィール', detail: '求人詳細', search: '求人を検索...', logout: 'ログアウト', openNav: 'ナビゲーションを開く', closeNav: 'ナビゲーションを閉じる',
+    dashboard: 'ダッシュボード', jobs: '求人一覧', interviews: '面接管理', companies: '企業一覧', companyDetail: '企業詳細', newJob: '求人登録', profile: 'スキルプロフィール', detail: '求人詳細', search: '求人を検索...', logout: 'ログアウト', openNav: 'ナビゲーションを開く', closeNav: 'ナビゲーションを閉じる',
   },
   zh: {
-    dashboard: '仪表盘', jobs: '岗位一览', companies: '公司一览', companyDetail: '公司详情', newJob: '新增岗位', profile: '技术栈档案', detail: '岗位详情', search: '搜索岗位...', logout: '退出登录', openNav: '打开导航', closeNav: '关闭导航',
+    dashboard: '仪表盘', jobs: '岗位一览', interviews: '面试管理', companies: '公司一览', companyDetail: '公司详情', newJob: '新增岗位', profile: '技术栈档案', detail: '岗位详情', search: '搜索岗位...', logout: '退出登录', openNav: '打开导航', closeNav: '关闭导航',
   },
 } as const
 
@@ -23,11 +23,12 @@ export function AppShell() {
   const navigation = [
     { to: '/', label: text.dashboard, icon: LayoutDashboard, end: true },
     { to: '/jobs', label: text.jobs, icon: BriefcaseBusiness, end: true },
+    { to: '/interviews', label: text.interviews, icon: CalendarDays, end: true },
     { to: '/companies', label: text.companies, icon: Building2, end: true },
     { to: '/jobs/new', label: text.newJob, icon: Plus },
     { to: '/profile', label: text.profile, icon: UserRoundCog },
   ]
-  const titles: Record<string, string> = { '/': text.dashboard, '/jobs': text.jobs, '/companies': text.companies, '/jobs/new': text.newJob, '/profile': text.profile }
+  const titles: Record<string, string> = { '/': text.dashboard, '/jobs': text.jobs, '/interviews': text.interviews, '/companies': text.companies, '/jobs/new': text.newJob, '/profile': text.profile }
   const pageTitle = location.pathname.startsWith('/jobs/') && location.pathname !== '/jobs/new' ? text.detail : location.pathname.startsWith('/companies/') ? text.companyDetail : titles[location.pathname] ?? 'OfferPath'
 
   return (
