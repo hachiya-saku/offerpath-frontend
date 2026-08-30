@@ -47,6 +47,18 @@ const demoInterviews: InterviewRecord[] = [
     location: "東京都渋谷区渋谷2丁目24-12 渋谷スクランブルスクエア",
     notes: "受付で面接担当者の名前を伝える。職務経歴書を持参。",
   },
+  {
+    id: "demo-completed-interview",
+    jobId: 5,
+    company: "Data Loom株式会社",
+    role: "プロダクトエンジニア",
+    round: "一面",
+    mode: "ONLINE",
+    scheduledAt: "2026-08-24T11:00:00+09:00",
+    platform: "Google Meet",
+    meetingUrl: "https://meet.google.com/abc-defg-hij",
+    notes: "一次面接終了。技術スタックとチーム開発について確認した。",
+  },
 ];
 
 export function getInterviews(): InterviewRecord[] {
