@@ -26,6 +26,7 @@ export type JobStatusHistoryRecord = {
   fromStatus: JobStatus;
   toStatus: JobStatus;
   changeType: JobStatusChangeType;
+  interviewId?: string;
   reason?: string;
   createdAt: string;
 };
@@ -33,6 +34,7 @@ export type JobStatusHistoryRecord = {
 const INTERVIEWS_KEY = "offerpath-interviews";
 const STATUS_KEY = "offerpath-job-statuses";
 const STATUS_HISTORY_KEY = "offerpath-job-status-history";
+const LEGACY_UNDO_RECONCILED_KEY = "offerpath-undo-reconciled-v1";
 export const INTERVIEWS_CHANGED_EVENT = "offerpath:interviews-changed";
 
 const demoInterviews: InterviewRecord[] = [
@@ -79,7 +81,21 @@ export function getInterviews(): InterviewRecord[] {
   const stored = localStorage.getItem(INTERVIEWS_KEY);
   if (!stored) return demoInterviews;
   try {
-    return JSON.parse(stored) as InterviewRecord[];
+    const interviews = JSON.parse(stored) as InterviewRecord[];
+    const includeLegacyUndos =
+      localStorage.getItem(LEGACY_UNDO_RECONCILED_KEY) !== "true";
+    const reconciled = reconcileUndoneInterviews(
+      interviews,
+      getStoredStatusHistory(),
+      includeLegacyUndos,
+    );
+    if (includeLegacyUndos) {
+      localStorage.setItem(LEGACY_UNDO_RECONCILED_KEY, "true");
+    }
+    if (reconciled.length !== interviews.length) {
+      localStorage.setItem(INTERVIEWS_KEY, JSON.stringify(reconciled));
+    }
+    return reconciled;
   } catch {
     return [];
   }
@@ -103,6 +119,7 @@ export function saveInterview(
     fromStatus: previousStatus,
     toStatus: interview.round,
     changeType: "ADVANCE",
+    interviewId: interview.id,
     createdAt: new Date().toISOString(),
   });
 }
@@ -129,6 +146,7 @@ export function undoInterview(
     fromStatus: interview.round,
     toStatus: previousStatus,
     changeType: "UNDO",
+    interviewId,
     reason: "Interview scheduling undone",
     createdAt: new Date().toISOString(),
   });
@@ -194,4 +212,30 @@ function getStoredStatusHistory(): JobStatusHistoryRecord[] {
 
 function notifyInterviewsChanged() {
   window.dispatchEvent(new Event(INTERVIEWS_CHANGED_EVENT));
+}
+
+function reconcileUndoneInterviews(
+  interviews: InterviewRecord[],
+  history: JobStatusHistoryRecord[],
+  includeLegacyUndos: boolean,
+) {
+  const reconciled = [...interviews];
+
+  for (const change of history) {
+    if (change.changeType !== "UNDO") continue;
+    if (!change.interviewId && !includeLegacyUndos) continue;
+
+    const index = change.interviewId
+      ? reconciled.findIndex((item) => item.id === change.interviewId)
+      : reconciled.findLastIndex(
+          (item) =>
+            !item.id.startsWith("demo-") &&
+            item.jobId === change.jobId &&
+            item.round === change.fromStatus,
+        );
+
+    if (index >= 0) reconciled.splice(index, 1);
+  }
+
+  return reconciled;
 }
