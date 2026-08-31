@@ -33,6 +33,7 @@ export type JobStatusHistoryRecord = {
 const INTERVIEWS_KEY = "offerpath-interviews";
 const STATUS_KEY = "offerpath-job-statuses";
 const STATUS_HISTORY_KEY = "offerpath-job-status-history";
+export const INTERVIEWS_CHANGED_EVENT = "offerpath:interviews-changed";
 
 const demoInterviews: InterviewRecord[] = [
   {
@@ -92,6 +93,7 @@ export function saveInterview(
     INTERVIEWS_KEY,
     JSON.stringify([...getInterviews(), interview]),
   );
+  notifyInterviewsChanged();
   const statuses = getStoredStatuses();
   statuses[interview.jobId] = interview.round;
   localStorage.setItem(STATUS_KEY, JSON.stringify(statuses));
@@ -113,10 +115,11 @@ export function undoInterview(
   const interview = getInterviews().find((item) => item.id === interviewId);
   if (!interview) return false;
 
-  localStorage.setItem(
-    INTERVIEWS_KEY,
-    JSON.stringify(getInterviews().filter((item) => item.id !== interviewId)),
+  const remainingInterviews = getInterviews().filter(
+    (item) => item.id !== interviewId,
   );
+  localStorage.setItem(INTERVIEWS_KEY, JSON.stringify(remainingInterviews));
+  notifyInterviewsChanged();
   const statuses = getStoredStatuses();
   statuses[jobId] = previousStatus;
   localStorage.setItem(STATUS_KEY, JSON.stringify(statuses));
@@ -187,4 +190,8 @@ function getStoredStatusHistory(): JobStatusHistoryRecord[] {
   } catch {
     return [];
   }
+}
+
+function notifyInterviewsChanged() {
+  window.dispatchEvent(new Event(INTERVIEWS_CHANGED_EVENT));
 }

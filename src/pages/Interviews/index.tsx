@@ -1,8 +1,12 @@
 import { CalendarClock, ExternalLink, KeyRound, MapPin, Monitor, Video } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { getInterviews, type InterviewRecord } from "@/data/interviewStore";
+import {
+  getInterviews,
+  INTERVIEWS_CHANGED_EVENT,
+  type InterviewRecord,
+} from "@/data/interviewStore";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getJobStatusLabel } from "@/i18n/jobLabels";
 
@@ -10,10 +14,20 @@ export function Interviews() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const text = interviewCopy[language];
-  const interviews = useMemo(
-    () => getInterviews().sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt)),
-    [],
-  );
+  const [interviews, setInterviews] = useState(() => loadInterviews());
+
+  useEffect(() => {
+    const refresh = () => setInterviews(loadInterviews());
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "offerpath-interviews") refresh();
+    };
+    window.addEventListener(INTERVIEWS_CHANGED_EVENT, refresh);
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener(INTERVIEWS_CHANGED_EVENT, refresh);
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
   const now = Date.now();
   const upcoming = interviews.filter((item) => new Date(item.scheduledAt).getTime() >= now);
   const past = interviews.filter((item) => new Date(item.scheduledAt).getTime() < now).reverse();
@@ -40,6 +54,12 @@ export function Interviews() {
         </>
       )}
     </div>
+  );
+}
+
+function loadInterviews() {
+  return getInterviews().sort((a, b) =>
+    a.scheduledAt.localeCompare(b.scheduledAt),
   );
 }
 
