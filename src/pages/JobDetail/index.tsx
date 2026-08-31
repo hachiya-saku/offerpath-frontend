@@ -4,18 +4,25 @@ import {
   CalendarPlus,
   ExternalLink,
   MapPin,
-  MoreHorizontal,
   Pencil,
+  RotateCcw,
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { jobs, statuses, type JobStatus } from "@/data/mockData";
+import { jobs, type JobStatus } from "@/data/mockData";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getJobStatusLabel } from "@/i18n/jobLabels";
 import { InterviewScheduleDialog } from "@/components/InterviewScheduleDialog";
-import { getStoredJobStatus } from "@/data/interviewStore";
+import { StatusCorrectionDialog } from "@/components/StatusCorrectionDialog";
+import {
+  correctJobStatus,
+  getJobStatusHistory,
+  getStoredJobStatus,
+  undoInterview,
+  type InterviewRecord,
+} from "@/data/interviewStore";
 
 const interviewStatuses: JobStatus[] = ["一面", "二面", "三面", "终面"];
 
@@ -39,6 +46,14 @@ export function JobDetail() {
     getStoredJobStatus(job.id, job.status),
   );
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [correctionOpen, setCorrectionOpen] = useState(false);
+  const [lastChange, setLastChange] = useState<{
+    interview: InterviewRecord;
+    previousStatus: JobStatus;
+  } | null>(null);
+  const [statusHistory, setStatusHistory] = useState(() =>
+    getJobStatusHistory(job.id),
+  );
   const availableStatuses = getAvailableInterviewStatuses(currentStatus);
   return (
     <div className="grid gap-6">
@@ -80,9 +95,10 @@ export function JobDetail() {
               variant="ghost"
               size="icon"
               type="button"
-              title={text.more}
+              title={text.correctStatus}
+              onClick={() => setCorrectionOpen(true)}
             >
-              <MoreHorizontal size={18} />
+              <RotateCcw size={17} />
             </Button>
           </div>
         </div>
@@ -108,6 +124,32 @@ export function JobDetail() {
           </div>
         </div>
       </section>
+      {lastChange && (
+        <div className="flex items-center justify-between gap-4 rounded-[5px] border border-[#49386b] bg-[#1d1729] px-4 py-3 text-xs text-[#cdbdf0]">
+          <span>{text.statusAdvanced}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-7 text-[#b99bea] hover:bg-[#2a203b] hover:text-white"
+            onClick={() => {
+              if (
+                undoInterview(
+                  lastChange.interview.id,
+                  job.id,
+                  lastChange.previousStatus,
+                )
+              ) {
+                setCurrentStatus(lastChange.previousStatus);
+                setStatusHistory(getJobStatusHistory(job.id));
+              }
+              setLastChange(null);
+            }}
+          >
+            <RotateCcw size={14} />
+            {text.undo}
+          </Button>
+        </div>
+      )}
       <div className="grid grid-cols-[minmax(0,1fr)_320px] items-start gap-[18px] max-[1050px]:grid-cols-1">
         <div className="grid gap-[18px]">
           <section className={panelClass}>
@@ -196,22 +238,39 @@ export function JobDetail() {
               <CalendarDays size={18} />
             </div>
             <div className="mt-5">
-              {statuses
-                .slice(0, 5)
-                .reverse()
-                .map((status, index) => (
+              {(statusHistory.length > 0
+                ? statusHistory
+                : [{
+                    id: "current",
+                    toStatus: currentStatus,
+                    changeType: "ADVANCE" as const,
+                    createdAt: new Date().toISOString(),
+                  }]
+              ).map((history, index) => (
                   <div
                     className="relative flex min-h-[54px] gap-[11px] after:absolute after:bottom-0 after:left-1 after:top-[11px] after:w-px after:bg-[#2c2831] after:content-[''] last:after:hidden"
-                    key={status}
+                    key={history.id}
                   >
                     <i
-                      className={`z-10 size-[9px] rounded-full border-2 not-italic ${index < 3 ? "border-[#8b5cf6] bg-[#8b5cf6]" : "border-[#4c4652] bg-[#151318]"}`}
+                      className={`z-10 size-[9px] rounded-full border-2 not-italic ${index === 0 ? "border-[#8b5cf6] bg-[#8b5cf6]" : "border-[#4c4652] bg-[#151318]"}`}
                     />
                     <p className="-mt-1 grid gap-[3px]">
-                      <strong className="text-[11px]">{getJobStatusLabel(status, language)}</strong>
+                      <strong className="text-[11px]">{getJobStatusLabel(history.toStatus, language)}</strong>
                       <span className="text-[9px] text-[#6f6977]">
-                        {index < 3 ? `${8 + index}${text.month}${12 + index}${text.day}` : text.waiting}
+                        {history.changeType === "CORRECTION"
+                          ? text.corrected
+                          : history.changeType === "UNDO"
+                            ? text.undone
+                            : text.advanced}
+                        {" · "}
+                        {new Intl.DateTimeFormat(
+                          language === "ja" ? "ja-JP" : "zh-CN",
+                          { dateStyle: "short", timeStyle: "short" },
+                        ).format(new Date(history.createdAt))}
                       </span>
+                      {"reason" in history && history.reason && (
+                        <span className="text-[9px] text-[#827a89]">{history.reason}</span>
+                      )}
                     </p>
                   </div>
                 ))}
@@ -230,11 +289,28 @@ export function JobDetail() {
       {scheduleOpen && availableStatuses.length > 0 && (
         <InterviewScheduleDialog
           job={job}
+          previousStatus={currentStatus}
           availableStatuses={availableStatuses}
           onClose={() => setScheduleOpen(false)}
-          onSaved={(status) => {
-            setCurrentStatus(status);
+          onSaved={(interview) => {
+            setLastChange({ interview, previousStatus: currentStatus });
+            setCurrentStatus(interview.round);
+            setStatusHistory(getJobStatusHistory(job.id));
             setScheduleOpen(false);
+          }}
+        />
+      )}
+      {correctionOpen && (
+        <StatusCorrectionDialog
+          jobId={job.id}
+          currentStatus={currentStatus}
+          onClose={() => setCorrectionOpen(false)}
+          onCorrect={(status, reason) => {
+            correctJobStatus(job.id, currentStatus, status, reason);
+            setCurrentStatus(status);
+            setStatusHistory(getJobStatusHistory(job.id));
+            setLastChange(null);
+            setCorrectionOpen(false);
           }}
         />
       )}
@@ -243,6 +319,6 @@ export function JobDetail() {
 }
 
 const detailCopy = {
-  ja: { jobs: "求人一覧", edit: "編集", more: "その他の操作", currentStatus: "現在のステータス", schedule: "設定:", skillMatch: "スキルマッチ度", salary: "給与範囲", updatedAt: "最終更新", analysis: "スキルマッチ分析", requiredSkills: "必須スキル", bonusSkills: "歓迎スキル", notes: "求人メモ", source: "求人情報元", timeline: "ステータス履歴", waiting: "待機中", deleteJob: "この求人を削除", month: "月", day: "日" },
-  zh: { jobs: "岗位一览", edit: "编辑", more: "更多操作", currentStatus: "当前状态", schedule: "安排", skillMatch: "技能匹配度", salary: "薪资范围", updatedAt: "最后更新", analysis: "技能匹配分析", requiredSkills: "必须技能", bonusSkills: "加分技能", notes: "岗位备注", source: "岗位来源", timeline: "状态记录", waiting: "等待中", deleteJob: "删除这个岗位", month: "月", day: "日" },
+  ja: { jobs: "求人一覧", edit: "編集", correctStatus: "ステータスを修正", currentStatus: "現在のステータス", schedule: "面接を設定", skillMatch: "スキルマッチ度", salary: "給与範囲", updatedAt: "最終更新", analysis: "スキルマッチ分析", requiredSkills: "必須スキル", bonusSkills: "歓迎スキル", notes: "求人メモ", source: "求人情報元", timeline: "ステータス履歴", statusAdvanced: "ステータスを更新しました。選択を間違えた場合は取り消せます。", undo: "取り消す", advanced: "進行", corrected: "修正", undone: "取り消し", deleteJob: "この求人を削除" },
+  zh: { jobs: "岗位一览", edit: "编辑", correctStatus: "修正岗位状态", currentStatus: "当前状态", schedule: "安排面试", skillMatch: "技能匹配度", salary: "薪资范围", updatedAt: "最后更新", analysis: "技能匹配分析", requiredSkills: "必须技能", bonusSkills: "加分技能", notes: "岗位备注", source: "岗位来源", timeline: "状态记录", statusAdvanced: "岗位状态已推进，如果刚才选错可以立即撤销。", undo: "撤销", advanced: "推进", corrected: "修正", undone: "撤销", deleteJob: "删除这个岗位" },
 } as const;

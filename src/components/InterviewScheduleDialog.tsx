@@ -2,21 +2,26 @@ import { CalendarClock, MapPin, Monitor, X } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import type { Job, JobStatus } from "@/data/mockData";
-import { saveInterview, type InterviewMode } from "@/data/interviewStore";
+import {
+  saveInterview,
+  type InterviewMode,
+  type InterviewRecord,
+} from "@/data/interviewStore";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getJobStatusLabel } from "@/i18n/jobLabels";
 
 type Props = {
   job: Job;
+  previousStatus: JobStatus;
   availableStatuses: JobStatus[];
   onClose: () => void;
-  onSaved: (status: JobStatus) => void;
+  onSaved: (interview: InterviewRecord) => void;
 };
 
 const inputClass =
   "h-[42px] w-full rounded-[5px] border border-[#302b35] bg-[#0f0e11] px-3 text-xs text-[#f2eef5] outline-none transition-colors focus:border-[#7957ba]";
 
-export function InterviewScheduleDialog({ job, availableStatuses, onClose, onSaved }: Props) {
+export function InterviewScheduleDialog({ job, previousStatus, availableStatuses, onClose, onSaved }: Props) {
   const { language } = useLanguage();
   const text = dialogCopy[language];
   const [mode, setMode] = useState<InterviewMode>("ONLINE");
@@ -35,7 +40,7 @@ export function InterviewScheduleDialog({ job, availableStatuses, onClose, onSav
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    saveInterview({
+    const interview: InterviewRecord = {
       id: crypto.randomUUID(),
       jobId: job.id,
       company: job.company,
@@ -49,8 +54,9 @@ export function InterviewScheduleDialog({ job, availableStatuses, onClose, onSav
       meetingPassword: mode === "ONLINE" ? String(data.get("meetingPassword") ?? "") : undefined,
       location: mode === "OFFLINE" ? String(data.get("location") ?? "") : undefined,
       notes: String(data.get("notes") ?? ""),
-    });
-    onSaved(selectedStatus);
+    };
+    saveInterview(interview, previousStatus);
+    onSaved(interview);
   };
 
   return (

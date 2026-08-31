@@ -18,8 +18,21 @@ export type InterviewRecord = {
   notes?: string;
 };
 
+export type JobStatusChangeType = "ADVANCE" | "CORRECTION" | "UNDO";
+
+export type JobStatusHistoryRecord = {
+  id: string;
+  jobId: number;
+  fromStatus: JobStatus;
+  toStatus: JobStatus;
+  changeType: JobStatusChangeType;
+  reason?: string;
+  createdAt: string;
+};
+
 const INTERVIEWS_KEY = "offerpath-interviews";
 const STATUS_KEY = "offerpath-job-statuses";
+const STATUS_HISTORY_KEY = "offerpath-job-status-history";
 
 const demoInterviews: InterviewRecord[] = [
   {
@@ -71,7 +84,10 @@ export function getInterviews(): InterviewRecord[] {
   }
 }
 
-export function saveInterview(interview: InterviewRecord) {
+export function saveInterview(
+  interview: InterviewRecord,
+  previousStatus: JobStatus,
+) {
   localStorage.setItem(
     INTERVIEWS_KEY,
     JSON.stringify([...getInterviews(), interview]),
@@ -79,6 +95,67 @@ export function saveInterview(interview: InterviewRecord) {
   const statuses = getStoredStatuses();
   statuses[interview.jobId] = interview.round;
   localStorage.setItem(STATUS_KEY, JSON.stringify(statuses));
+  appendStatusHistory({
+    id: crypto.randomUUID(),
+    jobId: interview.jobId,
+    fromStatus: previousStatus,
+    toStatus: interview.round,
+    changeType: "ADVANCE",
+    createdAt: new Date().toISOString(),
+  });
+}
+
+export function undoInterview(
+  interviewId: string,
+  jobId: number,
+  previousStatus: JobStatus,
+) {
+  const interview = getInterviews().find((item) => item.id === interviewId);
+  if (!interview) return false;
+
+  localStorage.setItem(
+    INTERVIEWS_KEY,
+    JSON.stringify(getInterviews().filter((item) => item.id !== interviewId)),
+  );
+  const statuses = getStoredStatuses();
+  statuses[jobId] = previousStatus;
+  localStorage.setItem(STATUS_KEY, JSON.stringify(statuses));
+  appendStatusHistory({
+    id: crypto.randomUUID(),
+    jobId,
+    fromStatus: interview.round,
+    toStatus: previousStatus,
+    changeType: "UNDO",
+    reason: "Interview scheduling undone",
+    createdAt: new Date().toISOString(),
+  });
+  return true;
+}
+
+export function correctJobStatus(
+  jobId: number,
+  fromStatus: JobStatus,
+  toStatus: JobStatus,
+  reason?: string,
+) {
+  const statuses = getStoredStatuses();
+  statuses[jobId] = toStatus;
+  localStorage.setItem(STATUS_KEY, JSON.stringify(statuses));
+  appendStatusHistory({
+    id: crypto.randomUUID(),
+    jobId,
+    fromStatus,
+    toStatus,
+    changeType: "CORRECTION",
+    reason,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+export function getJobStatusHistory(jobId: number) {
+  return getStoredStatusHistory()
+    .filter((item) => item.jobId === jobId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export function getStoredJobStatus(jobId: number, fallback: JobStatus) {
@@ -92,5 +169,22 @@ function getStoredStatuses(): Record<number, JobStatus> {
     return JSON.parse(stored) as Record<number, JobStatus>;
   } catch {
     return {};
+  }
+}
+
+function appendStatusHistory(history: JobStatusHistoryRecord) {
+  localStorage.setItem(
+    STATUS_HISTORY_KEY,
+    JSON.stringify([...getStoredStatusHistory(), history]),
+  );
+}
+
+function getStoredStatusHistory(): JobStatusHistoryRecord[] {
+  const stored = localStorage.getItem(STATUS_HISTORY_KEY);
+  if (!stored) return [];
+  try {
+    return JSON.parse(stored) as JobStatusHistoryRecord[];
+  } catch {
+    return [];
   }
 }

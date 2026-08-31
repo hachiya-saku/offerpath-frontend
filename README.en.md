@@ -25,6 +25,7 @@ The main frontend screens and a NestJS / PostgreSQL backend API are now being de
 - Structured recruitment content for responsibilities, qualifications, selection process, benefits, and more
 - Job detail page with skill analysis and a status timeline
 - Online / in-person interview scheduling linked to job status progression
+- Job status correction, mistaken progression undo, and change timeline
 - Interview management with meeting details and Google Maps venue lookup
 - Company directory, search, company detail, and related job views
 - Personal profile and technical skill inventory
