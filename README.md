@@ -1,5 +1,7 @@
 # OfferPath Frontend
 
+[![CI](https://github.com/hachiya-saku/offerpath-frontend/actions/workflows/ci.yml/badge.svg)](https://github.com/hachiya-saku/offerpath-frontend/actions/workflows/ci.yml)
+
 [日本語](README.md) | [简体中文](README.zh-CN.md) | [English](README.en.md)
 
 OfferPath は、複数の求人サービスや企業サイトに分散した求人情報を一元管理するための求職管理プラットフォームです。応募状況、求人とのスキルマッチ度、選考の進捗を一つのワークスペースで確認できます。
