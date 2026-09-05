@@ -9,6 +9,7 @@ import { Jobs } from '@/pages/Jobs'
 import { Login } from '@/pages/Login'
 import { Profile } from '@/pages/Profile'
 import { Interviews } from '@/pages/Interviews'
+import { Register } from '@/pages/Register';
 import './App.css'
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route element={<AppShell />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/jobs" element={<Jobs />} />

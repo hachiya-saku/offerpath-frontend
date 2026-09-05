@@ -9,11 +9,13 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { SubmitEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { loginAPI } from "@/api/auth";
+import { useAppDispatch } from "@/store/hooks";
+import { setCredentials } from "@/store/authSlice";
 import "./style.css";
 
 const inputClass =
@@ -40,6 +42,8 @@ export function Login() {
           forgot: "パスワードを忘れた場合",
           submit: "OfferPath を開く",
           demo: "デモアカウントで静的画面を確認できます。",
+          registerPrompt: "アカウントをお持ちでないですか？",
+          registerLink: "新規登録",
           show: "パスワードを表示",
           hide: "パスワードを隠す",
         }
@@ -59,26 +63,39 @@ export function Login() {
           forgot: "忘记密码？",
           submit: "进入 OfferPath",
           demo: "可使用演示账号查看静态页面。",
+          registerPrompt: "还没有账号？",
+          registerLink: "创建账号",
           show: "显示密码",
           hide: "隐藏密码",
         };
   const navigate = useNavigate();
+  const location = useLocation();
+  const dispatch = useAppDispatch();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const registrationSucceeded = location.state?.registrationSucceeded;
   const submit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    
-    const formData = new FormData(event.currentTarget);
+    setIsSubmitting(true);
+    setLoginError(null);
+    try {
+      const formData = new FormData(event.currentTarget);
 
-    const response = await loginAPI({
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-    });
+      const response = await loginAPI({
+        email: formData.get("email") as string,
+        password: formData.get("password") as string,
+      });
 
-    console.log("Login response:", response.data);
-
-    if (response.status === 200) {
+      dispatch(setCredentials(response.data));
       navigate("/");
-    } else {
-      console.error("Login failed:", response.statusText);
+    } catch {
+      setLoginError(
+        language === "ja"
+          ? "ログインに失敗しました。メールアドレスとパスワードを確認してください。"
+          : "登录失败，请检查邮箱和密码是否正确。",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -195,15 +212,40 @@ export function Login() {
               {text.forgot}
             </button>
           </div>
+          {registrationSucceeded && (
+            <p
+              className="border-l-2 border-emerald-500 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-300"
+              role="status"
+            >
+              {language === "ja"
+                ? "アカウントを作成しました。ログインしてください。"
+                : "账号创建成功，请登录。"}
+            </p>
+          )}
           <Button
             className="h-[45px] rounded-[5px] bg-[#7c3aed] text-white hover:bg-[#8b4cf0]"
             type="submit"
+            disabled={isSubmitting}
           >
-            {text.submit}
+            {isSubmitting
+              ? language === "ja"
+                ? "ログイン中..."
+                : "登录中..."
+              : text.submit}
             <ArrowRight size={17} />
           </Button>
+          {loginError && <p className="text-xs text-red-400">{loginError}</p>}
           <p className="m-0 text-center text-[9px] text-[#6f6977]">
             {text.demo}
+          </p>
+          <p className="m-0 text-center text-[10px] text-[#77717e]">
+            {text.registerPrompt}{" "}
+            <Link
+              className="font-medium text-[#b9a2e8] transition-colors hover:text-[#d5c4f5]"
+              to="/register"
+            >
+              {text.registerLink}
+            </Link>
           </p>
         </form>
       </section>

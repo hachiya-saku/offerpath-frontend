@@ -8,6 +8,8 @@ OfferPath 是一个求职岗位管理平台，用于集中管理分散在招聘�
 
 后端仓库：[offerpath-backend](https://github.com/hachiya-saku/offerpath-backend)
 
+接口文档：[docs/API.md](docs/API.md)
+
 前端主要页面以及基于 NestJS / PostgreSQL 的后端核心 API 已经完成，目前正在把静态数据逐步替换为真实接口数据。界面默认使用日语，并支持切换至中文及保存语言选择。
 
 ## 要解决的问题
