@@ -10,6 +10,12 @@ import { Button } from "@/components/ui/button";
 import { skills } from "@/data/mockData";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getExperienceLabel, getSkillLevelLabel } from "@/i18n/jobLabels";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { getUserProfileAPI } from "@/api/users";
+import { useAppSelector } from "@/store/hooks";
+import type { UserProfile } from "@/types/auth";
+import { EditProfileDialog } from "./EditProfileDialog";
 
 const skillTones: Record<string, string> = {
   purple: "bg-[#271d3b] text-[#b89cf6]",
@@ -29,29 +35,119 @@ const levelTones: Record<string, string> = {
 export function Profile() {
   const { language } = useLanguage();
   const text = profileCopy[language];
-  const profileStats = [[text.skillCount, "6"], [text.strongSkills, "2"], [text.averageMatch, "78%"], [text.completeness, "86%"]];
+  const accessToken = useAppSelector((state) => state.auth.accessToken);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
+  useEffect(() => {
+    if (!accessToken) {
+      setHasError(true);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadUserProfile = async () => {
+      setLoading(true);
+      setHasError(false);
+
+      try {
+        const response = await getUserProfileAPI(accessToken);
+        if (!cancelled) {
+          setUserProfile(response.data);
+        }
+      } catch {
+        if (!cancelled) {
+          setHasError(true);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadUserProfile();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
+
+  if (loading) {
+    return <ProfileLoading />;
+  }
+
+  if (hasError || !userProfile) {
+    return (
+      <section className="grid min-h-[320px] place-items-center rounded-md border border-[#30252d] bg-[#151318] px-6 text-center">
+        <div className="grid max-w-[360px] gap-3">
+          <CircleUserRound className="mx-auto text-[#765f86]" size={34} />
+          <h2 className="m-0 text-base">{text.loadError}</h2>
+          <p className="m-0 text-xs leading-6 text-[#8d8693]">
+            {text.loadErrorDetail}
+          </p>
+          <Link
+            className="mx-auto mt-1 text-xs text-[#b9a2e8] hover:text-[#d5c4f5]"
+            to="/login"
+          >
+            {text.backToLogin}
+          </Link>
+        </div>
+      </section>
+    );
+  }
+
+  const initials = getInitials(userProfile.displayName);
+  const completedFields = [
+    userProfile.displayName,
+    userProfile.bio,
+    userProfile.location,
+    userProfile.avatarUrl,
+  ].filter(Boolean).length;
+  const completeness = `${Math.round((completedFields / 4) * 100)}%`;
+  const profileStats = [
+    [text.skillCount, "6"],
+    [text.strongSkills, "2"],
+    [text.averageMatch, "78%"],
+    [text.completeness, completeness],
+  ];
+
   return (
     <div className="grid gap-6">
       <section className="flex items-center gap-[18px] rounded-md border border-[#211e25] bg-[#151318] p-[26px] max-[760px]:flex-wrap max-[760px]:items-start">
-        <div className="grid size-[76px] shrink-0 place-items-center rounded-md border border-[#4d3c6b] bg-[#221a35] text-[22px] font-bold text-[#c8b0fc]">
-          HS
-        </div>
+        {userProfile.avatarUrl ? (
+          <img
+            alt=""
+            className="size-[76px] shrink-0 rounded-md border border-[#4d3c6b] object-cover"
+            src={userProfile.avatarUrl}
+          />
+        ) : (
+          <div className="grid size-[76px] shrink-0 place-items-center rounded-md border border-[#4d3c6b] bg-[#221a35] text-[22px] font-bold text-[#c8b0fc]">
+            {initials}
+          </div>
+        )}
         <div className="flex-1">
           <p className="m-0 text-[10px] font-bold text-[#786f82]">
             PERSONAL PROFILE
           </p>
-          <h2 className="mb-1 mt-2 text-[23px] font-semibold">Hachiya Saku</h2>
+          <h2 className="mb-1 mt-2 text-[23px] font-semibold">
+            {userProfile.displayName}
+          </h2>
           <p className="text-[13px] text-[#948e9d]">
-            {text.description}
+            {userProfile.bio || text.emptyBio}
           </p>
           <div className="mt-3 flex gap-[18px] max-[460px]:flex-col max-[460px]:gap-1">
             <span className="flex items-center gap-1 text-[10px] text-[#6f6977]">
               <MapPin size={14} />
-              Tokyo, Japan
+              {userProfile.location || text.emptyLocation}
             </span>
             <span className="flex items-center gap-1 text-[10px] text-[#6f6977]">
               <AtSign size={14} />
-              hachiya@example.com
+              {userProfile.email}
             </span>
           </div>
         </div>
@@ -59,6 +155,7 @@ export function Profile() {
           className="h-[38px] rounded-[5px] border-[#2c2831] bg-[#17151a] px-3.5 text-xs text-[#c5bfca] hover:border-[#46404e] hover:bg-[#17151a] hover:text-white max-[760px]:w-full"
           variant="outline"
           type="button"
+          onClick={() => setIsEditOpen(true)}
         >
           <Pencil size={16} />
           {text.editProfile}
@@ -174,11 +271,35 @@ export function Profile() {
           </p>
         </div>
       </section>
+
+      <EditProfileDialog
+        language={language}
+        onClose={() => setIsEditOpen(false)}
+        open={isEditOpen}
+        profile={userProfile}
+      />
+    </div>
+  );
+}
+
+function getInitials(displayName: string) {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts.at(-1)?.[0] ?? ""}`.toUpperCase();
+}
+
+function ProfileLoading() {
+  return (
+    <div className="grid animate-pulse gap-6" aria-label="Loading profile">
+      <div className="h-[130px] rounded-md border border-[#211e25] bg-[#151318]" />
+      <div className="h-[82px] rounded-md border border-[#211e25] bg-[#151318]" />
+      <div className="h-[330px] rounded-md border border-[#211e25] bg-[#151318]" />
     </div>
   );
 }
 
 const profileCopy = {
-  ja: { description: "フロントエンドエンジニア志望。React / TypeScript を中心に学習しています。", editProfile: "プロフィールを編集", skillCount: "スキル数", strongSkills: "得意スキル", averageMatch: "求人平均マッチ度", completeness: "プロフィール完成度", skillProfile: "スキルプロフィール", skillDescription: "ここに登録したスキルをもとに求人とのマッチ度を算出します。", addSkill: "スキルを追加", skill: "スキル", level: "習熟度", experience: "経験期間", weight: "重み", edit: "編集", why: "スキルを管理する理由", whyDetail: "OfferPath は習熟度と求人のスキル要件からマッチ度を算出し、優先して準備すべき内容を見つけやすくします。" },
-  zh: { description: "志望成为前端工程师，主要学习 React / TypeScript。", editProfile: "编辑资料", skillCount: "技能数量", strongSkills: "熟练技能", averageMatch: "岗位平均匹配", completeness: "档案完整度", skillProfile: "我的技术栈", skillDescription: "匹配度计算将以此处记录的技能为基础。", addSkill: "添加技能", skill: "技能", level: "掌握程度", experience: "学习时间", weight: "权重", edit: "编辑", why: "为什么需要维护技术栈？", whyDetail: "OfferPath 会根据掌握程度和岗位技能要求计算匹配度，帮助你快速判断准备重点。" },
+  ja: { description: "フロントエンドエンジニア志望。React / TypeScript を中心に学習しています。", editProfile: "プロフィールを編集", emptyBio: "自己紹介はまだ登録されていません。", emptyLocation: "所在地未設定", loadError: "プロフィールを読み込めませんでした", loadErrorDetail: "ログイン状態を確認して、もう一度お試しください。", backToLogin: "ログイン画面へ", skillCount: "スキル数", strongSkills: "得意スキル", averageMatch: "求人平均マッチ度", completeness: "プロフィール完成度", skillProfile: "スキルプロフィール", skillDescription: "ここに登録したスキルをもとに求人とのマッチ度を算出します。", addSkill: "スキルを追加", skill: "スキル", level: "習熟度", experience: "経験期間", weight: "重み", edit: "編集", why: "スキルを管理する理由", whyDetail: "OfferPath は習熟度と求人のスキル要件からマッチ度を算出し、優先して準備すべき内容を見つけやすくします。" },
+  zh: { description: "志望成为前端工程师，主要学习 React / TypeScript。", editProfile: "编辑资料", emptyBio: "暂未填写个人简介。", emptyLocation: "未设置所在地", loadError: "无法加载个人资料", loadErrorDetail: "请确认登录状态后重新尝试。", backToLogin: "返回登录", skillCount: "技能数量", strongSkills: "熟练技能", averageMatch: "岗位平均匹配", completeness: "档案完整度", skillProfile: "我的技术栈", skillDescription: "匹配度计算将以此处记录的技能为基础。", addSkill: "添加技能", skill: "技能", level: "掌握程度", experience: "学习时间", weight: "权重", edit: "编辑", why: "为什么需要维护技术栈？", whyDetail: "OfferPath 会根据掌握程度和岗位技能要求计算匹配度，帮助你快速判断准备重点。" },
 } as const;
