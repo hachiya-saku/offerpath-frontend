@@ -13,9 +13,10 @@ import { getExperienceLabel, getSkillLevelLabel } from "@/i18n/jobLabels";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getUserProfileAPI, updateUserProfileAPI } from "@/api/users";
-import { useAppSelector } from "@/store/hooks";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import type { UserProfile, UpdateProfileRequest } from "@/types/auth";
 import { EditProfileDialog } from "./EditProfileDialog";
+import { updateCurrentUser } from "@/store/authSlice";
 
 const skillTones: Record<string, string> = {
   purple: "bg-[#271d3b] text-[#b89cf6]",
@@ -42,6 +43,7 @@ export function Profile() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     if (!accessToken) {
@@ -91,6 +93,7 @@ export function Profile() {
     try {
       const response = await updateUserProfileAPI(accessToken, data);
       setUserProfile(response.data);
+      dispatch(updateCurrentUser(response.data));
       setIsEditOpen(false);
     } catch {
       setSaveError(text.saveError);

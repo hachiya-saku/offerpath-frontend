@@ -74,6 +74,9 @@ export function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const registrationSucceeded = location.state?.registrationSucceeded;
+  const redirectTo = location.state?.from
+    ? `${location.state.from.pathname}${location.state.from.search}${location.state.from.hash}`
+    : "/";
   const submit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
@@ -87,7 +90,7 @@ export function Login() {
       });
 
       dispatch(setCredentials(response.data));
-      navigate("/");
+      navigate(redirectTo, { replace: true });
     } catch {
       setLoginError(
         language === "ja"

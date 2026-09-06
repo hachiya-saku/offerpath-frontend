@@ -42,3 +42,7 @@ export type UpdateProfileRequest = {
   location?: string;
   avatarUrl?: string;
 };
+
+export type LogoutResponse = {
+  message: string;
+};
