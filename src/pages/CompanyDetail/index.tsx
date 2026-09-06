@@ -45,6 +45,7 @@ const statusJa: Record<JobStatus, string> = {
   终面: "最終面接",
   offer: "内定",
   挂了: "不採用",
+  已放弃: "辞退",
 };
 
 export function CompanyDetail() {

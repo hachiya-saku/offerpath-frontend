@@ -108,35 +108,63 @@ type JobStatus =
   | 'THIRD_INTERVIEW'
   | 'FINAL_INTERVIEW'
   | 'OFFER'
-  | 'REJECTED';
+  | 'REJECTED'
+  | 'WITHDRAWN';
 ```
 
 ### 岗位
 
 ```ts
+type EmploymentType =
+  | 'FULL_TIME'
+  | 'CONTRACT'
+  | 'DISPATCH'
+  | 'FREELANCE'
+  | 'PART_TIME';
+
+type WorkMode = 'ONSITE' | 'HYBRID' | 'REMOTE' | 'FLEXIBLE';
+
 type Job = {
   id: string;
   companyId: string;
   positionName: string;
-  location: string | null;
   platform: string;
-  salaryMin: number | null;
-  salaryMax: number | null;
+  employmentType: EmploymentType;
+  hiringCount: number | null;
+  workMode: WorkMode;
+  location: string | null;
+  annualSalaryMin: number | null;
+  annualSalaryMax: number | null;
+  monthlySalaryMin: number | null;
+  monthlySalaryMax: number | null;
+  hourlySalaryMin: number | null;
+  hourlySalaryMax: number | null;
   salaryCurrency: string;
+  includesFixedOvertime: boolean;
+  fixedOvertimeHours: number | null;
+  fixedOvertimeAmount: number | null;
+  description: string | null;
+  applicationRequirements: string | null;
+  preferredQualifications: string | null;
+  selectionProcess: string | null;
+  workLocationDetails: string | null;
+  workingHours: string | null;
+  benefits: string | null;
+  holidays: string | null;
+  teamEnvironment: string | null;
   matchScore: number | null;
   url: string | null;
   status: JobStatus;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
-};
-
-type JobWithCompany = Job & {
   company: CompanySummary;
+  requiredSkills: string[];
+  bonusSkills: string[];
 };
 ```
 
-当前薪资字段由前端和后端约定单位，接口本身只保存整数与币种，不进行年薪/月薪换算。
+年薪与月薪按“万单位”保存，时薪与固定加班金额按基础货币单位保存。接口不自动换算不同薪资类型。
 
 ### 面试
 
@@ -391,7 +419,7 @@ type UpdateCompanyRequest = Partial<CreateCompanyRequest>;
 
 成功状态：`200`
 
-返回：`JobWithCompany[]`，按 `updatedAt` 降序。
+返回：`Job[]`，包含公司摘要与两类技能数组，按 `updatedAt` 降序。
 
 当前接口返回全部岗位，尚未实现服务端筛选和分页。
 
@@ -399,7 +427,7 @@ type UpdateCompanyRequest = Partial<CreateCompanyRequest>;
 
 成功状态：`200`
 
-返回：`JobWithCompany`
+返回：`Job`
 
 ### `POST /jobs`
 
@@ -411,10 +439,31 @@ type CreateJobRequest = {
   companyName?: string;
   positionName: string;
   platform: string;
+  employmentType?: EmploymentType;
+  hiringCount?: number;
+  workMode?: WorkMode;
   location?: string;
-  salaryMin?: number;
-  salaryMax?: number;
+  annualSalaryMin?: number;
+  annualSalaryMax?: number;
+  monthlySalaryMin?: number;
+  monthlySalaryMax?: number;
+  hourlySalaryMin?: number;
+  hourlySalaryMax?: number;
   salaryCurrency?: string;
+  includesFixedOvertime?: boolean;
+  fixedOvertimeHours?: number;
+  fixedOvertimeAmount?: number;
+  description?: string;
+  applicationRequirements?: string;
+  preferredQualifications?: string;
+  selectionProcess?: string;
+  workLocationDetails?: string;
+  workingHours?: string;
+  benefits?: string;
+  holidays?: string;
+  teamEnvironment?: string;
+  requiredSkills?: string[];
+  bonusSkills?: string[];
   url?: string;
   status?: JobStatus;
   notes?: string;
@@ -427,13 +476,14 @@ type CreateJobRequest = {
 - 传入 `companyId` 时，只能选择当前用户自己的公司。
 - 只传 `companyName` 时，后端会查找同名公司；不存在则自动创建。
 - `positionName` 最多 160 字符，`platform` 最多 80 字符。
-- `salaryMin`、`salaryMax` 必须为大于等于 `0` 的整数。
+- 薪资、招聘人数和固定加班数字段必须为大于等于 `0` 的整数；`hiringCount` 最小为 `1`。
+- `requiredSkills`、`bonusSkills` 会去除首尾空格，并按不区分大小写的技能名查重。
 - `url` 必须包含 `http://` 或 `https://`。
 - 未传 `status` 时默认为 `WISHLIST`，未传币种时默认为 `JPY`。
 
 成功状态：`201`
 
-返回：创建后的 `Job`，此接口当前不附带 `company` 对象。
+返回：创建后的 `Job`，包含公司摘要与两类技能数组。
 
 ### `PATCH /jobs/:id`
 
@@ -441,13 +491,13 @@ type CreateJobRequest = {
 
 成功状态：`200`
 
-返回：更新后的 `Job`，当前不附带 `company` 对象。
+返回：更新后的 `Job`，包含公司摘要与两类技能数组。
 
 ### `DELETE /jobs/:id`
 
 成功状态：`200`
 
-返回：被删除的 `Job`
+返回：被删除的 `Job`，包含公司摘要与两类技能数组。
 
 关联面试、岗位技能和状态历史会随岗位一起删除。
 
@@ -541,4 +591,3 @@ type CreateInterviewRequest = {
 - 岗位服务端筛选、排序与分页
 - 招聘 URL 解析
 - 注册后的邮箱验证、找回密码与第三方登录
-

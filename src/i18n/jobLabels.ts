@@ -11,6 +11,7 @@ const statusLabels: Record<JobStatus, Record<Language, string>> = {
   终面: { ja: "最終面接", zh: "终面" },
   offer: { ja: "内定", zh: "Offer" },
   挂了: { ja: "不採用", zh: "挂了" },
+  已放弃: { ja: "辞退", zh: "已放弃" },
 };
 
 const skillLevelLabels: Record<string, Record<Language, string>> = {

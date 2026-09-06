@@ -1,8 +1,10 @@
 import {
   ArrowLeft,
+  BriefcaseBusiness,
   CalendarDays,
   CalendarPlus,
   ExternalLink,
+  FileText,
   MapPin,
   Pencil,
   RotateCcw,
@@ -36,10 +38,64 @@ const panelClass =
   "rounded-md border border-[#211e25] bg-[#151318] p-[21px] max-[460px]:p-[17px]";
 const eyebrowClass = "m-0 text-[10px] font-bold text-[#786f82]";
 
+const demoJobDetails = {
+  ja: {
+    employmentType: "正社員",
+    workMode: "ハイブリッド",
+    hiringCount: "3名",
+    monthlySalary: "35万〜50万円",
+    fixedOvertime: "月20時間 / 50,000円（超過分は別途支給）",
+    description:
+      "自社Webプロダクトのフロントエンド設計・開発・改善を担当します。PdMやデザイナー、バックエンドエンジニアと連携し、ユーザー価値と保守性を両立した機能を継続的に届けます。",
+    applicationRequirements:
+      "Reactを用いた開発経験\nTypeScriptによるWebアプリケーション開発経験\nGitを利用したチーム開発経験",
+    preferredQualifications:
+      "Next.jsを用いた開発経験\nREST APIの設計・連携経験\n自動テストやCI/CDの構築経験",
+    selectionProcess:
+      "書類選考 → カジュアル面談 → 技術面接 → 最終面接 → 内定\n選考期間の目安：2〜3週間",
+    workLocationDetails:
+      "東京都渋谷区 / 週2〜3日のリモート勤務可\n出社日はチームと相談して決定します。",
+    workingHours:
+      "フレックスタイム制（コアタイム 11:00〜15:00）\n標準労働時間：1日8時間",
+    benefits:
+      "各種社会保険完備\n交通費支給\n書籍・技術イベント参加費補助\nPC・周辺機器選択制度",
+    holidays:
+      "完全週休2日制（土日祝）\n年次有給休暇\n夏季・年末年始休暇\n年間休日125日",
+    teamEnvironment:
+      "エンジニア6名、デザイナー2名、PdM 1名のチームです。コードレビューと週次の技術共有を行っています。",
+  },
+  zh: {
+    employmentType: "正式员工",
+    workMode: "混合办公",
+    hiringCount: "3人",
+    monthlySalary: "35万至50万日元",
+    fixedOvertime: "每月20小时 / 50,000日元（超出部分另行支付）",
+    description:
+      "负责自研 Web 产品的前端设计、开发和持续改进。与产品经理、设计师及后端工程师协作，在可维护性的基础上持续交付用户价值。",
+    applicationRequirements:
+      "具备 React 开发经验\n具备 TypeScript Web 应用开发经验\n具备使用 Git 进行团队开发的经验",
+    preferredQualifications:
+      "具备 Next.js 开发经验\n具备 REST API 设计或联调经验\n具备自动化测试或 CI/CD 建设经验",
+    selectionProcess:
+      "简历筛选 → 沟通面谈 → 技术面试 → 最终面试 → Offer\n预计选考周期：2至3周",
+    workLocationDetails:
+      "东京都涩谷区 / 每周可远程办公2至3天\n出勤日期由团队协商决定。",
+    workingHours:
+      "弹性工作制（核心时间 11:00至15:00）\n标准工作时间：每天8小时",
+    benefits:
+      "各类社会保险\n交通补贴\n书籍及技术活动费用补助\n可选电脑和外设",
+    holidays:
+      "双休及法定节假日\n带薪年假\n夏季及年末年初休假\n全年休息125天",
+    teamEnvironment:
+      "团队由6名工程师、2名设计师和1名产品经理组成，并实行代码审查和每周技术分享。",
+  },
+} as const;
+
 export function JobDetail() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const text = detailCopy[language];
+  const details = demoJobDetails[language];
   const { id } = useParams();
   const job = jobs.find((item) => item.id === Number(id)) ?? jobs[0];
   const [currentStatus, setCurrentStatus] = useState<JobStatus>(() =>
@@ -152,6 +208,44 @@ export function JobDetail() {
       )}
       <div className="grid grid-cols-[minmax(0,1fr)_320px] items-start gap-[18px] max-[1050px]:grid-cols-1">
         <div className="grid gap-[18px]">
+          <section className={panelClass}>
+            <div className="flex items-center gap-[11px] border-b border-[#211e25] pb-5">
+              <span className="grid size-[34px] place-items-center rounded-[5px] bg-[#221a35] text-[#b9a2ed]">
+                <FileText size={18} />
+              </span>
+              <div>
+                <p className={eyebrowClass}>JOB DESCRIPTION</p>
+                <h3 className="mt-1 text-[15px] font-semibold">
+                  {text.requirements}
+                </h3>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-3 gap-px overflow-hidden rounded-[5px] border border-[#211e25] bg-[#211e25] max-[760px]:grid-cols-1">
+              <SummaryItem label={text.employmentType} value={details.employmentType} />
+              <SummaryItem label={text.workMode} value={details.workMode} />
+              <SummaryItem label={text.hiringCount} value={details.hiringCount} />
+            </div>
+            <div className="mt-6 border-l-2 border-[#7654ae] pl-4">
+              <h4 className="text-[10px] font-medium text-[#bcb6c2]">
+                {text.description}
+              </h4>
+              <p className="mt-2 text-xs leading-7 text-[#aaa4ae]">
+                {details.description}
+              </p>
+            </div>
+            <dl className="mt-6 grid grid-cols-2 border-t border-[#211e25] max-[760px]:grid-cols-1">
+              <DetailItem label={text.monthlySalary} value={details.monthlySalary} />
+              <DetailItem label={text.fixedOvertime} value={details.fixedOvertime} />
+              <DetailItem label={text.applicationRequirements} value={details.applicationRequirements} />
+              <DetailItem label={text.preferredQualifications} value={details.preferredQualifications} />
+              <DetailItem label={text.selectionProcess} value={details.selectionProcess} />
+              <DetailItem label={text.workLocationDetails} value={details.workLocationDetails} />
+              <DetailItem label={text.workingHours} value={details.workingHours} />
+              <DetailItem label={text.benefits} value={details.benefits} />
+              <DetailItem label={text.holidays} value={details.holidays} />
+              <DetailItem label={text.teamEnvironment} value={details.teamEnvironment} />
+            </dl>
+          </section>
           <section className={panelClass}>
             <div className="flex items-start justify-between gap-5">
               <div>
@@ -319,6 +413,29 @@ export function JobDetail() {
 }
 
 const detailCopy = {
-  ja: { jobs: "求人一覧", edit: "編集", correctStatus: "ステータスを修正", currentStatus: "現在のステータス", schedule: "面接を設定", skillMatch: "スキルマッチ度", salary: "給与範囲", updatedAt: "最終更新", analysis: "スキルマッチ分析", requiredSkills: "必須スキル", bonusSkills: "歓迎スキル", notes: "求人メモ", source: "求人情報元", timeline: "ステータス履歴", statusAdvanced: "ステータスを更新しました。選択を間違えた場合は取り消せます。", undo: "取り消す", advanced: "進行", corrected: "修正", undone: "取り消し", deleteJob: "この求人を削除" },
-  zh: { jobs: "岗位一览", edit: "编辑", correctStatus: "修正岗位状态", currentStatus: "当前状态", schedule: "安排面试", skillMatch: "技能匹配度", salary: "薪资范围", updatedAt: "最后更新", analysis: "技能匹配分析", requiredSkills: "必须技能", bonusSkills: "加分技能", notes: "岗位备注", source: "岗位来源", timeline: "状态记录", statusAdvanced: "岗位状态已推进，如果刚才选错可以立即撤销。", undo: "撤销", advanced: "推进", corrected: "修正", undone: "撤销", deleteJob: "删除这个岗位" },
+  ja: { jobs: "求人一覧", edit: "編集", correctStatus: "ステータスを修正", currentStatus: "現在のステータス", schedule: "面接を設定", skillMatch: "スキルマッチ度", salary: "給与範囲", updatedAt: "最終更新", requirements: "募集要項", employmentType: "雇用形態", workMode: "勤務形態", hiringCount: "採用予定人数", monthlySalary: "月給", fixedOvertime: "固定残業代", description: "仕事内容", applicationRequirements: "応募資格", preferredQualifications: "歓迎条件", selectionProcess: "選考プロセス", workLocationDetails: "勤務地詳細", workingHours: "勤務時間", benefits: "待遇・福利厚生", holidays: "休日・休暇", teamEnvironment: "チーム・開発環境", analysis: "スキルマッチ分析", requiredSkills: "必須スキル", bonusSkills: "歓迎スキル", notes: "求人メモ", source: "求人情報元", timeline: "ステータス履歴", statusAdvanced: "ステータスを更新しました。選択を間違えた場合は取り消せます。", undo: "取り消す", advanced: "進行", corrected: "修正", undone: "取り消し", deleteJob: "この求人を削除" },
+  zh: { jobs: "岗位一览", edit: "编辑", correctStatus: "修正岗位状态", currentStatus: "当前状态", schedule: "安排面试", skillMatch: "技能匹配度", salary: "薪资范围", updatedAt: "最后更新", requirements: "招聘详情", employmentType: "雇佣类型", workMode: "工作方式", hiringCount: "招聘人数", monthlySalary: "月薪", fixedOvertime: "固定加班费", description: "工作内容", applicationRequirements: "应聘资格", preferredQualifications: "加分条件", selectionProcess: "选考流程", workLocationDetails: "工作地点详情", workingHours: "工作时间", benefits: "待遇与福利", holidays: "休息日与休假", teamEnvironment: "团队与开发环境", analysis: "技能匹配分析", requiredSkills: "必须技能", bonusSkills: "加分技能", notes: "岗位备注", source: "岗位来源", timeline: "状态记录", statusAdvanced: "岗位状态已推进，如果刚才选错可以立即撤销。", undo: "撤销", advanced: "推进", corrected: "修正", undone: "撤销", deleteJob: "删除这个岗位" },
 } as const;
+
+function SummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid min-h-[72px] content-center gap-1.5 bg-[#111014] px-4 py-3">
+      <span className="text-[9px] text-[#6f6977]">{label}</span>
+      <strong className="flex items-center gap-1.5 text-xs font-medium text-[#d4ced8]">
+        <BriefcaseBusiness size={13} className="text-[#8f76c7]" />
+        {value}
+      </strong>
+    </div>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-b border-[#211e25] py-5 odd:pr-6 even:border-l even:pl-6 max-[760px]:px-0 max-[760px]:even:border-l-0 max-[760px]:even:pl-0">
+      <dt className="text-[10px] font-medium text-[#b9a2ed]">{label}</dt>
+      <dd className="m-0 mt-2 whitespace-pre-line text-[11px] leading-6 text-[#9f99a4]">
+        {value}
+      </dd>
+    </div>
+  );
+}

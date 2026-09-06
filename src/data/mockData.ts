@@ -1,4 +1,4 @@
-export type JobStatus = '想投' | '已投' | '书类选考' | '一面' | '二面' | '三面' | '终面' | 'offer' | '挂了'
+export type JobStatus = '想投' | '已投' | '书类选考' | '一面' | '二面' | '三面' | '终面' | 'offer' | '挂了' | '已放弃'
 
 export type Job = {
   id: number
@@ -27,7 +27,7 @@ export type Company = {
   notes?: string
 }
 
-export const statuses: JobStatus[] = ['想投', '已投', '书类选考', '一面', '二面', '三面', '终面', 'offer', '挂了']
+export const statuses: JobStatus[] = ['想投', '已投', '书类选考', '一面', '二面', '三面', '终面', 'offer', '挂了' , '已放弃']
 
 export const recruitmentPlatforms = [
   'Green',
