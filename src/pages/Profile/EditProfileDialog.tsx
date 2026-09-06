@@ -1,8 +1,7 @@
 import { FileText, Image, MapPin, UserRound, X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, type SubmitEventHandler } from "react";
 import { Button } from "@/components/ui/button";
-import type { UpdateProfileRequest, UserProfile } from '@/types/auth';
-
+import type { UpdateProfileRequest, UserProfile } from "@/types/auth";
 
 type EditProfileDialogProps = {
   language: "ja" | "zh";
@@ -23,7 +22,7 @@ export function EditProfileDialog({
   isSaving,
   saveError,
   onClose,
-  onSave
+  onSave,
 }: EditProfileDialogProps) {
   const text = dialogCopy[language];
 
@@ -37,6 +36,22 @@ export function EditProfileDialog({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose, open]);
+
+  const handleSubmit: SubmitEventHandler<HTMLFormElement> = (event) => {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+    const bio = String(formData.get("bio") ?? "").trim();
+    const location = String(formData.get("location") ?? "").trim();
+    const avatarUrl = String(formData.get("avatarUrl") ?? "").trim();
+
+    onSave({
+      displayName: String(formData.get("displayName") ?? "").trim(),
+      bio: bio || undefined,
+      location: location || undefined,
+      avatarUrl: avatarUrl || undefined,
+    });
+  };
 
   if (!open) return null;
 
@@ -74,10 +89,7 @@ export function EditProfileDialog({
           </Button>
         </header>
 
-        <form
-          className="grid gap-4 px-5 py-5"
-          onSubmit={(event) => event.preventDefault()}
-        >
+        <form className="grid gap-4 px-5 py-5" onSubmit={handleSubmit}>
           <label className="grid gap-2 text-[10px] text-[#bcb6c2]">
             <span>{text.displayName}</span>
             <div className="relative flex items-center">
@@ -96,7 +108,10 @@ export function EditProfileDialog({
           <label className="grid gap-2 text-[10px] text-[#bcb6c2]">
             <span>{text.bio}</span>
             <div className="relative">
-              <FileText className="absolute left-3 top-3 text-[#6f6977]" size={15} />
+              <FileText
+                className="absolute left-3 top-3 text-[#6f6977]"
+                size={15}
+              />
               <textarea
                 className="min-h-[92px] w-full resize-y rounded-[5px] border border-[#302b34] bg-[#100f12] py-2.5 pl-9 pr-3 text-xs leading-5 text-[#f4f1f6] outline-none transition-colors placeholder:text-[#5e5864] focus:border-[#7655a9]"
                 defaultValue={profile.bio ?? ""}
@@ -137,6 +152,9 @@ export function EditProfileDialog({
           </label>
 
           <p className="m-0 text-[9px] text-[#6f6977]">{profile.email}</p>
+          {saveError && (
+            <p className="m-0 text-[9px] text-[#f75a68]">{saveError}</p>
+          )}
 
           <footer className="mt-1 flex justify-end gap-2 border-t border-[#29252e] pt-4">
             <Button
@@ -152,7 +170,7 @@ export function EditProfileDialog({
               type="submit"
               disabled={isSaving}
             >
-              {isSaving ?  "保存中..." : text.save}
+              {isSaving ? text.saving : text.save}
             </Button>
           </footer>
         </form>
@@ -173,6 +191,7 @@ const dialogCopy = {
     avatarUrl: "アバター URL",
     cancel: "キャンセル",
     save: "変更を保存",
+    saving: "保存中...",
   },
   zh: {
     title: "编辑个人资料",
@@ -185,5 +204,6 @@ const dialogCopy = {
     avatarUrl: "头像 URL",
     cancel: "取消",
     save: "保存修改",
+    saving: "保存中...",
   },
 } as const;

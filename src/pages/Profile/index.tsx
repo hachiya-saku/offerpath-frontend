@@ -12,9 +12,9 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { getExperienceLabel, getSkillLevelLabel } from "@/i18n/jobLabels";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getUserProfileAPI } from "@/api/users";
+import { getUserProfileAPI, updateUserProfileAPI } from "@/api/users";
 import { useAppSelector } from "@/store/hooks";
-import type { UserProfile } from "@/types/auth";
+import type { UserProfile, UpdateProfileRequest } from "@/types/auth";
 import { EditProfileDialog } from "./EditProfileDialog";
 
 const skillTones: Record<string, string> = {
@@ -40,6 +40,8 @@ export function Profile() {
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!accessToken) {
@@ -76,6 +78,26 @@ export function Profile() {
       cancelled = true;
     };
   }, [accessToken]);
+
+  const handleSaveProfile = async (data: UpdateProfileRequest) => {
+    if (!accessToken) {
+      setSaveError(text.saveError);
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const response = await updateUserProfileAPI(accessToken, data);
+      setUserProfile(response.data);
+      setIsEditOpen(false);
+    } catch {
+      setSaveError(text.saveError);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (loading) {
     return <ProfileLoading />;
@@ -180,7 +202,9 @@ export function Profile() {
             <p className="m-0 text-[10px] font-bold text-[#786f82]">
               SKILL INVENTORY
             </p>
-            <h3 className="mt-1 text-[15px] font-semibold">{text.skillProfile}</h3>
+            <h3 className="mt-1 text-[15px] font-semibold">
+              {text.skillProfile}
+            </h3>
             <p className="mt-1.5 text-xs text-[#948e9d]">
               {text.skillDescription}
             </p>
@@ -266,13 +290,14 @@ export function Profile() {
         <CircleUserRound size={22} />
         <div className="grid gap-0.5">
           <strong className="text-[11px]">{text.why}</strong>
-          <p className="m-0 text-[10px] text-[#948e9d]">
-            {text.whyDetail}
-          </p>
+          <p className="m-0 text-[10px] text-[#948e9d]">{text.whyDetail}</p>
         </div>
       </section>
 
       <EditProfileDialog
+        onSave={handleSaveProfile}
+        isSaving={isSaving}
+        saveError={saveError}
         language={language}
         onClose={() => setIsEditOpen(false)}
         open={isEditOpen}
@@ -300,6 +325,56 @@ function ProfileLoading() {
 }
 
 const profileCopy = {
-  ja: { description: "フロントエンドエンジニア志望。React / TypeScript を中心に学習しています。", editProfile: "プロフィールを編集", emptyBio: "自己紹介はまだ登録されていません。", emptyLocation: "所在地未設定", loadError: "プロフィールを読み込めませんでした", loadErrorDetail: "ログイン状態を確認して、もう一度お試しください。", backToLogin: "ログイン画面へ", skillCount: "スキル数", strongSkills: "得意スキル", averageMatch: "求人平均マッチ度", completeness: "プロフィール完成度", skillProfile: "スキルプロフィール", skillDescription: "ここに登録したスキルをもとに求人とのマッチ度を算出します。", addSkill: "スキルを追加", skill: "スキル", level: "習熟度", experience: "経験期間", weight: "重み", edit: "編集", why: "スキルを管理する理由", whyDetail: "OfferPath は習熟度と求人のスキル要件からマッチ度を算出し、優先して準備すべき内容を見つけやすくします。" },
-  zh: { description: "志望成为前端工程师，主要学习 React / TypeScript。", editProfile: "编辑资料", emptyBio: "暂未填写个人简介。", emptyLocation: "未设置所在地", loadError: "无法加载个人资料", loadErrorDetail: "请确认登录状态后重新尝试。", backToLogin: "返回登录", skillCount: "技能数量", strongSkills: "熟练技能", averageMatch: "岗位平均匹配", completeness: "档案完整度", skillProfile: "我的技术栈", skillDescription: "匹配度计算将以此处记录的技能为基础。", addSkill: "添加技能", skill: "技能", level: "掌握程度", experience: "学习时间", weight: "权重", edit: "编辑", why: "为什么需要维护技术栈？", whyDetail: "OfferPath 会根据掌握程度和岗位技能要求计算匹配度，帮助你快速判断准备重点。" },
+  ja: {
+    description:
+      "フロントエンドエンジニア志望。React / TypeScript を中心に学習しています。",
+    editProfile: "プロフィールを編集",
+    emptyBio: "自己紹介はまだ登録されていません。",
+    emptyLocation: "所在地未設定",
+    loadError: "プロフィールを読み込めませんでした",
+    loadErrorDetail: "ログイン状態を確認して、もう一度お試しください。",
+    backToLogin: "ログイン画面へ",
+    skillCount: "スキル数",
+    strongSkills: "得意スキル",
+    averageMatch: "求人平均マッチ度",
+    completeness: "プロフィール完成度",
+    skillProfile: "スキルプロフィール",
+    skillDescription:
+      "ここに登録したスキルをもとに求人とのマッチ度を算出します。",
+    addSkill: "スキルを追加",
+    skill: "スキル",
+    level: "習熟度",
+    experience: "経験期間",
+    weight: "重み",
+    edit: "編集",
+    why: "スキルを管理する理由",
+    whyDetail:
+      "OfferPath は習熟度と求人のスキル要件からマッチ度を算出し、優先して準備すべき内容を見つけやすくします。",
+    saveError: "プロフィールを保存できませんでした",
+  },
+  zh: {
+    description: "志望成为前端工程师，主要学习 React / TypeScript。",
+    editProfile: "编辑资料",
+    emptyBio: "暂未填写个人简介。",
+    emptyLocation: "未设置所在地",
+    loadError: "无法加载个人资料",
+    loadErrorDetail: "请确认登录状态后重新尝试。",
+    backToLogin: "返回登录",
+    skillCount: "技能数量",
+    strongSkills: "熟练技能",
+    averageMatch: "岗位平均匹配",
+    completeness: "档案完整度",
+    skillProfile: "我的技术栈",
+    skillDescription: "匹配度计算将以此处记录的技能为基础。",
+    addSkill: "添加技能",
+    skill: "技能",
+    level: "掌握程度",
+    experience: "学习时间",
+    weight: "权重",
+    edit: "编辑",
+    why: "为什么需要维护技术栈？",
+    whyDetail:
+      "OfferPath 会根据掌握程度和岗位技能要求计算匹配度，帮助你快速判断准备重点。",
+    saveError: "保存个人资料失败，请稍后重试。",
+  },
 } as const;
