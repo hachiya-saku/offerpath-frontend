@@ -14,8 +14,8 @@ import { Button } from "@/components/ui/button";
 import { jobs, type JobStatus } from "@/data/mockData";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getJobStatusLabel } from "@/i18n/jobLabels";
-import { InterviewScheduleDialog } from "@/components/InterviewScheduleDialog";
-import { StatusCorrectionDialog } from "@/components/StatusCorrectionDialog";
+import { InterviewScheduleDialog } from "./InterviewScheduleDialog";
+import { StatusCorrectionDialog } from "./StatusCorrectionDialog";
 import {
   correctJobStatus,
   getJobStatusHistory,
