@@ -10,14 +10,19 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { jobs, type JobStatus } from "@/data/mockData";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getJobStatusLabel } from "@/i18n/jobLabels";
 import { InterviewScheduleDialog } from "./InterviewScheduleDialog";
+import { DeleteJobDialog } from "./DeleteJobDialog";
+import { type Job } from "@/types/jobs";
+import { useAppSelector } from "@/store/hooks";
 import { StatusCorrectionDialog } from "./StatusCorrectionDialog";
+import { deleteJobAPI, getJobAPI } from "@/api/jobs";
+
 import {
   correctJobStatus,
   getJobStatusHistory,
@@ -34,68 +39,72 @@ function getAvailableInterviewStatuses(status: JobStatus) {
   return currentIndex === -1 ? [] : interviewStatuses.slice(currentIndex + 1);
 }
 
+function formatSalaryRange(
+  min: number | null,
+  max: number | null,
+  language: "ja" | "zh",
+) {
+  if (min === null && max === null) return "-";
+
+  if (language === "zh") {
+    if (min !== null && max !== null) return `${min}万至${max}万日元`;
+    if (min !== null) return `${min}万日元起`;
+    return `最高${max}万日元`;
+  }
+
+  if (min !== null && max !== null) return `${min}万〜${max}万円`;
+  if (min !== null) return `${min}万円〜`;
+  return `〜${max}万円`;
+}
+
+function formatFixedOvertime(job: Job, language: "ja" | "zh") {
+  if (!job.includesFixedOvertime) {
+    return language === "ja" ? "なし" : "不包含";
+  }
+
+  const details = [
+    job.fixedOvertimeHours === null
+      ? null
+      : language === "ja"
+        ? `${job.fixedOvertimeHours}時間 / 月`
+        : `${job.fixedOvertimeHours}小时 / 月`,
+    job.fixedOvertimeAmount === null
+      ? null
+      : language === "ja"
+        ? `${job.fixedOvertimeAmount.toLocaleString("ja-JP")}円 / 月`
+        : `${job.fixedOvertimeAmount.toLocaleString("zh-CN")}日元 / 月`,
+  ].filter((value): value is string => value !== null);
+
+  if (details.length === 0) {
+    return language === "ja" ? "含む（詳細なし）" : "包含（无明细）";
+  }
+
+  return details.join(" · ");
+}
+
+const employmentTypeLabels = {
+  FULL_TIME: { ja: "正社員", zh: "正式员工" },
+  CONTRACT: { ja: "契約社員", zh: "合同员工" },
+  DISPATCH: { ja: "派遣社員", zh: "派遣员工" },
+  FREELANCE: { ja: "業務委託", zh: "业务委托" },
+  PART_TIME: { ja: "パート・アルバイト", zh: "兼职" },
+} as const;
+
+const workModeLabels = {
+  ONSITE: { ja: "出社", zh: "到岗" },
+  HYBRID: { ja: "ハイブリッド", zh: "混合办公" },
+  REMOTE: { ja: "フルリモート", zh: "全远程" },
+  FLEXIBLE: { ja: "応相談", zh: "可商议" },
+} as const;
+
 const panelClass =
   "rounded-md border border-[#211e25] bg-[#151318] p-[21px] max-[460px]:p-[17px]";
 const eyebrowClass = "m-0 text-[10px] font-bold text-[#786f82]";
-
-const demoJobDetails = {
-  ja: {
-    employmentType: "正社員",
-    workMode: "ハイブリッド",
-    hiringCount: "3名",
-    monthlySalary: "35万〜50万円",
-    fixedOvertime: "月20時間 / 50,000円（超過分は別途支給）",
-    description:
-      "自社Webプロダクトのフロントエンド設計・開発・改善を担当します。PdMやデザイナー、バックエンドエンジニアと連携し、ユーザー価値と保守性を両立した機能を継続的に届けます。",
-    applicationRequirements:
-      "Reactを用いた開発経験\nTypeScriptによるWebアプリケーション開発経験\nGitを利用したチーム開発経験",
-    preferredQualifications:
-      "Next.jsを用いた開発経験\nREST APIの設計・連携経験\n自動テストやCI/CDの構築経験",
-    selectionProcess:
-      "書類選考 → カジュアル面談 → 技術面接 → 最終面接 → 内定\n選考期間の目安：2〜3週間",
-    workLocationDetails:
-      "東京都渋谷区 / 週2〜3日のリモート勤務可\n出社日はチームと相談して決定します。",
-    workingHours:
-      "フレックスタイム制（コアタイム 11:00〜15:00）\n標準労働時間：1日8時間",
-    benefits:
-      "各種社会保険完備\n交通費支給\n書籍・技術イベント参加費補助\nPC・周辺機器選択制度",
-    holidays:
-      "完全週休2日制（土日祝）\n年次有給休暇\n夏季・年末年始休暇\n年間休日125日",
-    teamEnvironment:
-      "エンジニア6名、デザイナー2名、PdM 1名のチームです。コードレビューと週次の技術共有を行っています。",
-  },
-  zh: {
-    employmentType: "正式员工",
-    workMode: "混合办公",
-    hiringCount: "3人",
-    monthlySalary: "35万至50万日元",
-    fixedOvertime: "每月20小时 / 50,000日元（超出部分另行支付）",
-    description:
-      "负责自研 Web 产品的前端设计、开发和持续改进。与产品经理、设计师及后端工程师协作，在可维护性的基础上持续交付用户价值。",
-    applicationRequirements:
-      "具备 React 开发经验\n具备 TypeScript Web 应用开发经验\n具备使用 Git 进行团队开发的经验",
-    preferredQualifications:
-      "具备 Next.js 开发经验\n具备 REST API 设计或联调经验\n具备自动化测试或 CI/CD 建设经验",
-    selectionProcess:
-      "简历筛选 → 沟通面谈 → 技术面试 → 最终面试 → Offer\n预计选考周期：2至3周",
-    workLocationDetails:
-      "东京都涩谷区 / 每周可远程办公2至3天\n出勤日期由团队协商决定。",
-    workingHours:
-      "弹性工作制（核心时间 11:00至15:00）\n标准工作时间：每天8小时",
-    benefits:
-      "各类社会保险\n交通补贴\n书籍及技术活动费用补助\n可选电脑和外设",
-    holidays:
-      "双休及法定节假日\n带薪年假\n夏季及年末年初休假\n全年休息125天",
-    teamEnvironment:
-      "团队由6名工程师、2名设计师和1名产品经理组成，并实行代码审查和每周技术分享。",
-  },
-} as const;
 
 export function JobDetail() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const text = detailCopy[language];
-  const details = demoJobDetails[language];
   const { id } = useParams();
   const job = jobs.find((item) => item.id === Number(id)) ?? jobs[0];
   const [currentStatus, setCurrentStatus] = useState<JobStatus>(() =>
@@ -111,6 +120,89 @@ export function JobDetail() {
     getJobStatusHistory(job.id),
   );
   const availableStatuses = getAvailableInterviewStatuses(currentStatus);
+  const accessToken = useAppSelector((state) => state.auth.accessToken);
+  const [apiJob, setApiJob] = useState<Job | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  useEffect(() => {
+    if (!accessToken || !id) {
+      setError(
+        language === "ja"
+          ? "求人IDまたはログイン状態を確認できません。"
+          : "无法确认岗位 ID 或登录状态。",
+      );
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchJob = async () => {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const response = await getJobAPI(accessToken, id);
+
+        if (!cancelled) {
+          setApiJob(response.data);
+        }
+      } catch {
+        if (!cancelled) {
+          setError(
+            language === "ja"
+              ? "求人情報の取得に失敗しました。"
+              : "获取岗位信息失败。",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void fetchJob();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, id, language]);
+
+  const handleDelete = async () => {
+    if (!accessToken || !id) {
+      setDeleteError(text.deleteError);
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError("");
+
+    try {
+      await deleteJobAPI(accessToken, id);
+      navigate("/jobs", { replace: true });
+    } catch {
+      setDeleteError(text.deleteError);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  if (isLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (error) {
+    return <p role="alert">{error}</p>;
+  }
+
+  if (!apiJob) {
+    return null;
+  }
+
   return (
     <div className="grid gap-6">
       <section className="border-b border-[#211e25] pb-[22px] pt-1">
@@ -125,16 +217,16 @@ export function JobDetail() {
         </Button>
         <div className="mt-6 flex items-center gap-[15px] max-[760px]:flex-wrap max-[760px]:items-start">
           <span className="company-monogram large">
-            {job.company.slice(0, 1)}
+            {apiJob.company.name.slice(0, 1)}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="m-0 text-[11px] text-[#948e9d]">{job.company}</p>
+            <p className="m-0 text-[11px] text-[#948e9d]">{apiJob.company.name}</p>
             <h2 className="mb-1.5 mt-1 text-[27px] font-semibold">
-              {job.role}
+              {apiJob.positionName}
             </h2>
             <span className="flex items-center gap-1 text-[10px] text-[#948e9d]">
               <MapPin size={14} />
-              {job.location} · {job.platform}
+              {apiJob.location ?? "-"} · {apiJob.platform}
             </span>
           </div>
           <div className="flex gap-2 max-[760px]:w-full">
@@ -142,6 +234,7 @@ export function JobDetail() {
               className="h-[38px] rounded-[5px] border-[#2c2831] bg-[#17151a] px-3.5 text-xs text-[#c5bfca] hover:border-[#46404e] hover:bg-[#17151a] hover:text-white"
               variant="outline"
               type="button"
+              onClick={() => navigate(`/jobs/${apiJob.id}/edit`)}
             >
               <Pencil size={16} />
               {text.edit}
@@ -160,23 +253,44 @@ export function JobDetail() {
         </div>
         <div className="mt-6 grid grid-cols-4 gap-px bg-[#211e25] max-[760px]:grid-cols-2">
           <div className="grid gap-2 bg-[#0c0b0e] p-[15px]">
-            <span className="text-[9px] text-[#6f6977]">{text.currentStatus}</span>
+            <span className="text-[9px] text-[#6f6977]">
+              {text.currentStatus}
+            </span>
             <strong className={`status-badge status-${currentStatus}`}>
               {getJobStatusLabel(currentStatus, language)}
             </strong>
-            {availableStatuses.length > 0 && <button type="button" className="mt-1 flex w-fit items-center gap-1 border-0 bg-transparent p-0 text-[9px] text-[#b69bf2] hover:text-[#d6c9f4]" onClick={() => setScheduleOpen(true)}><CalendarPlus size={13} />{text.schedule}</button>}
+            {availableStatuses.length > 0 && (
+              <button
+                type="button"
+                className="mt-1 flex w-fit items-center gap-1 border-0 bg-transparent p-0 text-[9px] text-[#b69bf2] hover:text-[#d6c9f4]"
+                onClick={() => setScheduleOpen(true)}
+              >
+                <CalendarPlus size={13} />
+                {text.schedule}
+              </button>
+            )}
           </div>
           <div className="grid gap-2 bg-[#0c0b0e] p-[15px]">
             <span className="text-[9px] text-[#6f6977]">{text.skillMatch}</span>
-            <strong className="text-[17px] text-[#2dd4bf]">{job.match}%</strong>
+            <strong className="text-[17px] text-[#2dd4bf]">{apiJob.matchScore ?? 0}%</strong>
           </div>
           <div className="grid gap-2 bg-[#0c0b0e] p-[15px]">
             <span className="text-[9px] text-[#6f6977]">{text.salary}</span>
-            <strong className="text-xs">{job.salary}</strong>
+            <strong className="text-xs">
+              {formatSalaryRange(
+                apiJob.annualSalaryMin,
+                apiJob.annualSalaryMax,
+                language,
+              )}
+            </strong>
           </div>
           <div className="grid gap-2 bg-[#0c0b0e] p-[15px]">
             <span className="text-[9px] text-[#6f6977]">{text.updatedAt}</span>
-            <strong className="text-xs">{job.updatedAt}</strong>
+            <strong className="text-xs">
+              {new Intl.DateTimeFormat(
+                language === "ja" ? "ja-JP" : "zh-CN",
+              ).format(new Date(apiJob.updatedAt))}
+            </strong>
           </div>
         </div>
       </section>
@@ -221,39 +335,82 @@ export function JobDetail() {
               </div>
             </div>
             <div className="mt-5 grid grid-cols-3 gap-px overflow-hidden rounded-[5px] border border-[#211e25] bg-[#211e25] max-[760px]:grid-cols-1">
-              <SummaryItem label={text.employmentType} value={details.employmentType} />
-              <SummaryItem label={text.workMode} value={details.workMode} />
-              <SummaryItem label={text.hiringCount} value={details.hiringCount} />
+              <SummaryItem
+                label={text.employmentType}
+                value={employmentTypeLabels[apiJob.employmentType][language]}
+              />
+              <SummaryItem
+                label={text.workMode}
+                value={workModeLabels[apiJob.workMode][language]}
+              />
+              <SummaryItem
+                label={text.hiringCount}
+                value={
+                  apiJob.hiringCount === null
+                    ? "-"
+                    : `${apiJob.hiringCount}${language === "ja" ? "名" : "人"}`
+                }
+              />
             </div>
             <div className="mt-6 border-l-2 border-[#7654ae] pl-4">
               <h4 className="text-[10px] font-medium text-[#bcb6c2]">
                 {text.description}
               </h4>
               <p className="mt-2 text-xs leading-7 text-[#aaa4ae]">
-                {details.description}
+                {apiJob.description ?? "-"}
               </p>
             </div>
             <dl className="mt-6 grid grid-cols-2 border-t border-[#211e25] max-[760px]:grid-cols-1">
-              <DetailItem label={text.monthlySalary} value={details.monthlySalary} />
-              <DetailItem label={text.fixedOvertime} value={details.fixedOvertime} />
-              <DetailItem label={text.applicationRequirements} value={details.applicationRequirements} />
-              <DetailItem label={text.preferredQualifications} value={details.preferredQualifications} />
-              <DetailItem label={text.selectionProcess} value={details.selectionProcess} />
-              <DetailItem label={text.workLocationDetails} value={details.workLocationDetails} />
-              <DetailItem label={text.workingHours} value={details.workingHours} />
-              <DetailItem label={text.benefits} value={details.benefits} />
-              <DetailItem label={text.holidays} value={details.holidays} />
-              <DetailItem label={text.teamEnvironment} value={details.teamEnvironment} />
+              <DetailItem
+                label={text.monthlySalary}
+                value={formatSalaryRange(
+                  apiJob.monthlySalaryMin,
+                  apiJob.monthlySalaryMax,
+                  language,
+                )}
+              />
+              <DetailItem
+                label={text.fixedOvertime}
+                value={formatFixedOvertime(apiJob, language)}
+              />
+              <DetailItem
+                label={text.applicationRequirements}
+                value={apiJob.applicationRequirements ?? "-"}
+              />
+              <DetailItem
+                label={text.preferredQualifications}
+                value={apiJob.preferredQualifications ?? "-"}
+              />
+              <DetailItem
+                label={text.selectionProcess}
+                value={apiJob.selectionProcess ?? "-"}
+              />
+              <DetailItem
+                label={text.workLocationDetails}
+                value={apiJob.workLocationDetails ?? "-"}
+              />
+              <DetailItem
+                label={text.workingHours}
+                value={apiJob.workingHours ?? "-"}
+              />
+              <DetailItem label={text.benefits} value={apiJob.benefits ?? "-"} />
+              <DetailItem label={text.holidays} value={apiJob.holidays ?? "-"} />
+              <DetailItem
+                label={text.teamEnvironment}
+                value={apiJob.teamEnvironment ?? "-"}
+              />
             </dl>
           </section>
           <section className={panelClass}>
             <div className="flex items-start justify-between gap-5">
               <div>
                 <p className={eyebrowClass}>SKILL MATCH</p>
-                <h3 className="mt-1 text-[15px] font-semibold">{text.analysis}</h3>
+                <h3 className="mt-1 text-[15px] font-semibold">
+                  {text.analysis}
+                </h3>
               </div>
               <span className="grid size-[43px] place-items-center rounded-full border-[3px] border-[#2dd4bf] text-xs font-bold text-[#70ddcf]">
-                {job.match}
+                {apiJob.matchScore ?? 0}%
               </span>
             </div>
             <div className="mt-[22px]">
@@ -261,7 +418,7 @@ export function JobDetail() {
                 {text.requiredSkills}
               </h4>
               <div className="flex flex-wrap gap-[7px]">
-                {job.requiredSkills.map((skill) => (
+                {apiJob.requiredSkills.map((skill) => (
                   <span
                     className="rounded-[3px] border border-[#265048] bg-[#142923] px-[9px] py-1.5 text-[10px] text-[#68d8c2]"
                     key={skill}
@@ -276,7 +433,7 @@ export function JobDetail() {
                 {text.bonusSkills}
               </h4>
               <div className="flex flex-wrap gap-[7px]">
-                {job.bonusSkills.map((skill, index) => (
+                {apiJob.bonusSkills.map((skill, index) => (
                   <span
                     className={`rounded-[3px] border px-[9px] py-1.5 text-[10px] ${index === 0 ? "border-[#265048] bg-[#142923] text-[#68d8c2]" : "border-[#2c2831] bg-[#19171c] text-[#8c8692]"}`}
                     key={skill}
@@ -297,29 +454,38 @@ export function JobDetail() {
                 className="h-auto p-0 text-[11px] text-[#a994df] hover:bg-transparent hover:text-[#d0c0f7]"
                 variant="ghost"
                 type="button"
+                onClick={() => navigate(`/jobs/${apiJob.id}/edit`)}
               >
                 <Pencil size={14} />
                 {text.edit}
               </Button>
             </div>
-            <p className="mt-5 text-xs leading-7 text-[#aaa4ae]">{job.note}</p>
+            <p className="mt-5 text-xs leading-7 text-[#aaa4ae]">
+              {apiJob.notes ?? "-"}
+            </p>
           </section>
           <section className={panelClass}>
             <div className="flex items-start justify-between gap-5">
               <div>
                 <p className={eyebrowClass}>SOURCE</p>
-                <h3 className="mt-1 text-[15px] font-semibold">{text.source}</h3>
+                <h3 className="mt-1 text-[15px] font-semibold">
+                  {text.source}
+                </h3>
               </div>
             </div>
-            <a
-              className="mt-[18px] flex justify-between gap-2.5 rounded border border-[#2c2831] p-3 text-[10px] text-[#a994df] no-underline"
-              href={job.url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <span className="truncate">{job.url}</span>
-              <ExternalLink size={16} />
-            </a>
+            {apiJob.url ? (
+              <a
+                className="mt-[18px] flex justify-between gap-2.5 rounded border border-[#2c2831] p-3 text-[10px] text-[#a994df] no-underline"
+                href={apiJob.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span className="truncate">{apiJob.url}</span>
+                <ExternalLink size={16} />
+              </a>
+            ) : (
+              <p className="mt-[18px] text-[10px] text-[#6f6977]">-</p>
+            )}
           </section>
         </div>
         <aside className="grid gap-[18px] max-[1050px]:grid-cols-2 max-[760px]:grid-cols-1">
@@ -327,53 +493,65 @@ export function JobDetail() {
             <div className="flex items-start justify-between gap-5">
               <div>
                 <p className={eyebrowClass}>TIMELINE</p>
-                <h3 className="mt-1 text-[15px] font-semibold">{text.timeline}</h3>
+                <h3 className="mt-1 text-[15px] font-semibold">
+                  {text.timeline}
+                </h3>
               </div>
               <CalendarDays size={18} />
             </div>
             <div className="mt-5">
               {(statusHistory.length > 0
                 ? statusHistory
-                : [{
-                    id: "current",
-                    toStatus: currentStatus,
-                    changeType: "ADVANCE" as const,
-                    createdAt: new Date().toISOString(),
-                  }]
+                : [
+                    {
+                      id: "current",
+                      toStatus: currentStatus,
+                      changeType: "ADVANCE" as const,
+                      createdAt: new Date().toISOString(),
+                    },
+                  ]
               ).map((history, index) => (
-                  <div
-                    className="relative flex min-h-[54px] gap-[11px] after:absolute after:bottom-0 after:left-1 after:top-[11px] after:w-px after:bg-[#2c2831] after:content-[''] last:after:hidden"
-                    key={history.id}
-                  >
-                    <i
-                      className={`z-10 size-[9px] rounded-full border-2 not-italic ${index === 0 ? "border-[#8b5cf6] bg-[#8b5cf6]" : "border-[#4c4652] bg-[#151318]"}`}
-                    />
-                    <p className="-mt-1 grid gap-[3px]">
-                      <strong className="text-[11px]">{getJobStatusLabel(history.toStatus, language)}</strong>
-                      <span className="text-[9px] text-[#6f6977]">
-                        {history.changeType === "CORRECTION"
-                          ? text.corrected
-                          : history.changeType === "UNDO"
-                            ? text.undone
-                            : text.advanced}
-                        {" · "}
-                        {new Intl.DateTimeFormat(
-                          language === "ja" ? "ja-JP" : "zh-CN",
-                          { dateStyle: "short", timeStyle: "short" },
-                        ).format(new Date(history.createdAt))}
+                <div
+                  className="relative flex min-h-[54px] gap-[11px] after:absolute after:bottom-0 after:left-1 after:top-[11px] after:w-px after:bg-[#2c2831] after:content-[''] last:after:hidden"
+                  key={history.id}
+                >
+                  <i
+                    className={`z-10 size-[9px] rounded-full border-2 not-italic ${index === 0 ? "border-[#8b5cf6] bg-[#8b5cf6]" : "border-[#4c4652] bg-[#151318]"}`}
+                  />
+                  <p className="-mt-1 grid gap-[3px]">
+                    <strong className="text-[11px]">
+                      {getJobStatusLabel(history.toStatus, language)}
+                    </strong>
+                    <span className="text-[9px] text-[#6f6977]">
+                      {history.changeType === "CORRECTION"
+                        ? text.corrected
+                        : history.changeType === "UNDO"
+                          ? text.undone
+                          : text.advanced}
+                      {" · "}
+                      {new Intl.DateTimeFormat(
+                        language === "ja" ? "ja-JP" : "zh-CN",
+                        { dateStyle: "short", timeStyle: "short" },
+                      ).format(new Date(history.createdAt))}
+                    </span>
+                    {"reason" in history && history.reason && (
+                      <span className="text-[9px] text-[#827a89]">
+                        {history.reason}
                       </span>
-                      {"reason" in history && history.reason && (
-                        <span className="text-[9px] text-[#827a89]">{history.reason}</span>
-                      )}
-                    </p>
-                  </div>
-                ))}
+                    )}
+                  </p>
+                </div>
+              ))}
             </div>
           </section>
           <Button
             className="h-[38px] w-full rounded-[5px] border border-[#4c252d] bg-[#211419] text-xs text-[#f08c94] hover:bg-[#2a171d]"
             variant="destructive"
             type="button"
+            onClick={() => {
+              setDeleteError("");
+              setDeleteOpen(true);
+            }}
           >
             <Trash2 size={16} />
             {text.deleteJob}
@@ -408,13 +586,97 @@ export function JobDetail() {
           }}
         />
       )}
+      <DeleteJobDialog
+        error={deleteError}
+        isDeleting={isDeleting}
+        jobName={`${apiJob.company.name} / ${apiJob.positionName}`}
+        language={language}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={() => void handleDelete()}
+        open={deleteOpen}
+      />
     </div>
   );
 }
 
 const detailCopy = {
-  ja: { jobs: "求人一覧", edit: "編集", correctStatus: "ステータスを修正", currentStatus: "現在のステータス", schedule: "面接を設定", skillMatch: "スキルマッチ度", salary: "給与範囲", updatedAt: "最終更新", requirements: "募集要項", employmentType: "雇用形態", workMode: "勤務形態", hiringCount: "採用予定人数", monthlySalary: "月給", fixedOvertime: "固定残業代", description: "仕事内容", applicationRequirements: "応募資格", preferredQualifications: "歓迎条件", selectionProcess: "選考プロセス", workLocationDetails: "勤務地詳細", workingHours: "勤務時間", benefits: "待遇・福利厚生", holidays: "休日・休暇", teamEnvironment: "チーム・開発環境", analysis: "スキルマッチ分析", requiredSkills: "必須スキル", bonusSkills: "歓迎スキル", notes: "求人メモ", source: "求人情報元", timeline: "ステータス履歴", statusAdvanced: "ステータスを更新しました。選択を間違えた場合は取り消せます。", undo: "取り消す", advanced: "進行", corrected: "修正", undone: "取り消し", deleteJob: "この求人を削除" },
-  zh: { jobs: "岗位一览", edit: "编辑", correctStatus: "修正岗位状态", currentStatus: "当前状态", schedule: "安排面试", skillMatch: "技能匹配度", salary: "薪资范围", updatedAt: "最后更新", requirements: "招聘详情", employmentType: "雇佣类型", workMode: "工作方式", hiringCount: "招聘人数", monthlySalary: "月薪", fixedOvertime: "固定加班费", description: "工作内容", applicationRequirements: "应聘资格", preferredQualifications: "加分条件", selectionProcess: "选考流程", workLocationDetails: "工作地点详情", workingHours: "工作时间", benefits: "待遇与福利", holidays: "休息日与休假", teamEnvironment: "团队与开发环境", analysis: "技能匹配分析", requiredSkills: "必须技能", bonusSkills: "加分技能", notes: "岗位备注", source: "岗位来源", timeline: "状态记录", statusAdvanced: "岗位状态已推进，如果刚才选错可以立即撤销。", undo: "撤销", advanced: "推进", corrected: "修正", undone: "撤销", deleteJob: "删除这个岗位" },
+  ja: {
+    jobs: "求人一覧",
+    edit: "編集",
+    correctStatus: "ステータスを修正",
+    currentStatus: "現在のステータス",
+    schedule: "面接を設定",
+    skillMatch: "スキルマッチ度",
+    salary: "給与範囲",
+    updatedAt: "最終更新",
+    requirements: "募集要項",
+    employmentType: "雇用形態",
+    workMode: "勤務形態",
+    hiringCount: "採用予定人数",
+    monthlySalary: "月給",
+    fixedOvertime: "固定残業代",
+    description: "仕事内容",
+    applicationRequirements: "応募資格",
+    preferredQualifications: "歓迎条件",
+    selectionProcess: "選考プロセス",
+    workLocationDetails: "勤務地詳細",
+    workingHours: "勤務時間",
+    benefits: "待遇・福利厚生",
+    holidays: "休日・休暇",
+    teamEnvironment: "チーム・開発環境",
+    analysis: "スキルマッチ分析",
+    requiredSkills: "必須スキル",
+    bonusSkills: "歓迎スキル",
+    notes: "求人メモ",
+    source: "求人情報元",
+    timeline: "ステータス履歴",
+    statusAdvanced:
+      "ステータスを更新しました。選択を間違えた場合は取り消せます。",
+    undo: "取り消す",
+    advanced: "進行",
+    corrected: "修正",
+    undone: "取り消し",
+    deleteJob: "この求人を削除",
+    deleteError: "求人を削除できませんでした。もう一度お試しください。",
+  },
+  zh: {
+    jobs: "岗位一览",
+    edit: "编辑",
+    correctStatus: "修正岗位状态",
+    currentStatus: "当前状态",
+    schedule: "安排面试",
+    skillMatch: "技能匹配度",
+    salary: "薪资范围",
+    updatedAt: "最后更新",
+    requirements: "招聘详情",
+    employmentType: "雇佣类型",
+    workMode: "工作方式",
+    hiringCount: "招聘人数",
+    monthlySalary: "月薪",
+    fixedOvertime: "固定加班费",
+    description: "工作内容",
+    applicationRequirements: "应聘资格",
+    preferredQualifications: "加分条件",
+    selectionProcess: "选考流程",
+    workLocationDetails: "工作地点详情",
+    workingHours: "工作时间",
+    benefits: "待遇与福利",
+    holidays: "休息日与休假",
+    teamEnvironment: "团队与开发环境",
+    analysis: "技能匹配分析",
+    requiredSkills: "必须技能",
+    bonusSkills: "加分技能",
+    notes: "岗位备注",
+    source: "岗位来源",
+    timeline: "状态记录",
+    statusAdvanced: "岗位状态已推进，如果刚才选错可以立即撤销。",
+    undo: "撤销",
+    advanced: "推进",
+    corrected: "修正",
+    undone: "撤销",
+    deleteJob: "删除这个岗位",
+    deleteError: "岗位删除失败，请重试。",
+  },
 } as const;
 
 function SummaryItem({ label, value }: { label: string; value: string }) {

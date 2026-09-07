@@ -103,4 +103,4 @@ export type CreateJobRequest = {
   notes?: string;
 };
 
-export type UpdateJobRequest = Partial<CreateJobRequest>;
+export type UpdateJobRequest = Partial<Omit<CreateJobRequest, "status">>;

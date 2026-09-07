@@ -10,19 +10,21 @@ import {
   X,
 } from "lucide-react";
 import {
+  useEffect,
   useState,
   type SubmitEvent,
   type InputHTMLAttributes,
   type ReactNode,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useAppSelector } from "@/store/hooks";
-import { createJobAPI } from "@/api/jobs";
+import { createJobAPI, getJobAPI, updateJobAPI } from "@/api/jobs";
 import type {
   CreateJobRequest,
   EmploymentType,
+  Job,
   JobStatus,
   WorkMode,
 } from "@/types/jobs";
@@ -97,6 +99,11 @@ const copy = {
     savedDates: "作成日時・更新日時",
     savedDatesValue: "保存後に記録",
     saving: "保存中...",
+    editTitle: "求人を編集",
+    editSubtitle: "登録済みの求人情報を更新します。",
+    update: "変更を保存",
+    loading: "求人情報を読み込んでいます...",
+    loadError: "求人情報を取得できませんでした。",
   },
   zh: {
     back: "返回",
@@ -156,6 +163,11 @@ const copy = {
     savedDates: "创建时间与更新时间",
     savedDatesValue: "保存后记录",
     saving: "保存中...",
+    editTitle: "编辑岗位",
+    editSubtitle: "更新已经保存的岗位信息。",
+    update: "保存修改",
+    loading: "正在读取岗位信息...",
+    loadError: "岗位信息获取失败。",
   },
 } as const;
 
@@ -246,6 +258,8 @@ function getRequiredString(formData: FormData, name: string) {
 
 export function JobForm() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = Boolean(id);
   const { language } = useLanguage();
   const text = copy[language];
   const options = optionCopy[language];
@@ -253,8 +267,52 @@ export function JobForm() {
   const [bonus, setBonus] = useState(["Next.js"]);
   const [includesFixedOvertime, setIncludesFixedOvertime] = useState(false);
   const accessToken = useAppSelector((state) => state.auth.accessToken);
+  const [initialJob, setInitialJob] = useState<Job | null>(null);
+  const [isLoading, setIsLoading] = useState(isEditMode);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>("");
+
+  useEffect(() => {
+    if (!isEditMode || !id) return;
+
+    if (!accessToken) {
+      setSaveError(
+        language === "ja"
+          ? "アクセストークンがありません。ログインしてください。"
+          : "没有访问令牌，请登录。",
+      );
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchJob = async () => {
+      setIsLoading(true);
+      setSaveError("");
+
+      try {
+        const response = await getJobAPI(accessToken, id);
+
+        if (!cancelled) {
+          setInitialJob(response.data);
+          setRequired(response.data.requiredSkills);
+          setBonus(response.data.bonusSkills);
+          setIncludesFixedOvertime(response.data.includesFixedOvertime);
+        }
+      } catch {
+        if (!cancelled) setSaveError(text.loadError);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void fetchJob();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, id, isEditMode, language, text.loadError]);
 
   const submit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -300,7 +358,10 @@ export function JobForm() {
         ? getOptionalNumber(formData, "fixedOvertimeAmount")
         : undefined,
 
-      status: getRequiredString(formData, "status") as JobStatus,
+      status:
+        isEditMode && initialJob
+          ? initialJob.status
+          : (getRequiredString(formData, "status") as JobStatus),
 
       description: getOptionalString(formData, "description"),
       applicationRequirements: getOptionalString(
@@ -326,8 +387,14 @@ export function JobForm() {
     };
 
     try {
-      await createJobAPI(accessToken, data);
-      navigate("/jobs", { replace: true });
+      if (isEditMode && id) {
+        const { status: _status, ...updateData } = data;
+        await updateJobAPI(accessToken, id, updateData);
+        navigate(`/jobs/${id}`, { replace: true });
+      } else {
+        await createJobAPI(accessToken, data);
+        navigate("/jobs", { replace: true });
+      }
     } catch {
       setSaveError(
         language === "ja" ? "求人を保存できませんでした。" : "岗位保存失败。",
@@ -337,8 +404,27 @@ export function JobForm() {
     }
   };
 
+  if (isLoading || (isEditMode && initialJob?.id !== id && !saveError)) {
+    return (
+      <p className="py-12 text-center text-xs text-[#948e9d]">
+        {text.loading}
+      </p>
+    );
+  }
+
+  if (isEditMode && initialJob?.id !== id) {
+    return (
+      <p
+        className="py-12 text-center text-xs text-[#ef9aa2]"
+        role="alert"
+      >
+        {saveError || text.loadError}
+      </p>
+    );
+  }
+
   return (
-    <form className="grid gap-6" onSubmit={submit}>
+    <form className="grid gap-6" onSubmit={submit} key={initialJob?.id ?? "new"}>
       <section className="flex items-end justify-between gap-7 pb-1 max-[760px]:grid max-[760px]:items-start">
         <div>
           <Button
@@ -352,12 +438,14 @@ export function JobForm() {
             {text.back}
           </Button>
           <p className="m-0 text-[10px] font-bold text-[#786f82]">
-            NEW OPPORTUNITY
+            {isEditMode ? "EDIT OPPORTUNITY" : "NEW OPPORTUNITY"}
           </p>
           <h2 className="mb-1 mt-2 text-[27px] font-semibold max-[760px]:text-[23px]">
-            {text.title}
+            {isEditMode ? text.editTitle : text.title}
           </h2>
-          <p className="text-[13px] text-[#948e9d]">{text.subtitle}</p>
+          <p className="text-[13px] text-[#948e9d]">
+            {isEditMode ? text.editSubtitle : text.subtitle}
+          </p>
         </div>
         <div className="flex gap-2 max-[760px]:w-full max-[760px]:[&>button]:flex-1">
           <Button
@@ -374,7 +462,7 @@ export function JobForm() {
             disabled={isSaving}
           >
             <Save size={17} />
-            {isSaving ? text.saving : text.save}
+            {isSaving ? text.saving : isEditMode ? text.update : text.save}
           </Button>
           {saveError && (
             <p
@@ -398,6 +486,7 @@ export function JobForm() {
               <Field label={`${text.companyName} *`}>
                 <input
                   className={fieldClass}
+                  defaultValue={initialJob?.company.name ?? ""}
                   name="companyName"
                   required
                   placeholder={text.companyPlaceholder}
@@ -406,6 +495,7 @@ export function JobForm() {
               <Field label={`${text.positionName} *`}>
                 <input
                   className={fieldClass}
+                  defaultValue={initialJob?.positionName ?? ""}
                   name="positionName"
                   required
                   placeholder={text.positionPlaceholder}
@@ -413,12 +503,14 @@ export function JobForm() {
               </Field>
               <Field label={`${text.employmentType} *`}>
                 <OptionSelect
+                  defaultValue={initialJob?.employmentType}
                   name="employmentType"
                   options={options.employmentTypes}
                 />
               </Field>
               <Field label={text.hiringCount}>
                 <InputWithSuffix
+                  defaultValue={initialJob?.hiringCount ?? ""}
                   name="hiringCount"
                   type="number"
                   min="1"
@@ -430,7 +522,7 @@ export function JobForm() {
                 <select
                   className={fieldClass}
                   name="platform"
-                  defaultValue="Green"
+                  defaultValue={initialJob?.platform ?? "Green"}
                   required
                 >
                   {recruitmentPlatforms.map((platform) => (
@@ -439,12 +531,17 @@ export function JobForm() {
                 </select>
               </Field>
               <Field label={`${text.workMode} *`}>
-                <OptionSelect name="workMode" options={options.workModes} />
+                <OptionSelect
+                  defaultValue={initialJob?.workMode}
+                  name="workMode"
+                  options={options.workModes}
+                />
               </Field>
               <div className="col-span-full max-[760px]:col-auto">
                 <Field label={text.location}>
                   <input
                     className={fieldClass}
+                    defaultValue={initialJob?.location ?? ""}
                     name="location"
                     placeholder={text.locationPlaceholder}
                   />
@@ -464,7 +561,7 @@ export function JobForm() {
                   <select
                     className={fieldClass}
                     name="salaryCurrency"
-                    defaultValue="JPY"
+                    defaultValue={initialJob?.salaryCurrency ?? "JPY"}
                   >
                     <option value="JPY">JPY</option>
                     <option value="USD">USD</option>
@@ -475,6 +572,8 @@ export function JobForm() {
             </div>
             <div className="mt-4 grid gap-3">
               <SalaryRange
+                defaultMin={initialJob?.annualSalaryMin}
+                defaultMax={initialJob?.annualSalaryMax}
                 label={text.annualSalary}
                 minLabel={text.salaryMin}
                 maxLabel={text.salaryMax}
@@ -485,6 +584,8 @@ export function JobForm() {
                 suffix={language === "ja" ? "万円" : "万日元"}
               />
               <SalaryRange
+                defaultMin={initialJob?.monthlySalaryMin}
+                defaultMax={initialJob?.monthlySalaryMax}
                 label={text.monthlySalary}
                 minLabel={text.salaryMin}
                 maxLabel={text.salaryMax}
@@ -495,6 +596,8 @@ export function JobForm() {
                 suffix={language === "ja" ? "万円" : "万日元"}
               />
               <SalaryRange
+                defaultMin={initialJob?.hourlySalaryMin}
+                defaultMax={initialJob?.hourlySalaryMax}
                 label={text.hourlySalary}
                 minLabel={text.salaryMin}
                 maxLabel={text.salaryMax}
@@ -521,6 +624,7 @@ export function JobForm() {
               <div className="mt-4 grid grid-cols-2 gap-[18px] max-[560px]:grid-cols-1">
                 <Field label={text.overtimeHours}>
                   <InputWithSuffix
+                    defaultValue={initialJob?.fixedOvertimeHours ?? ""}
                     name="fixedOvertimeHours"
                     type="number"
                     min="0"
@@ -530,6 +634,7 @@ export function JobForm() {
                 </Field>
                 <Field label={text.overtimeAmount}>
                   <InputWithSuffix
+                    defaultValue={initialJob?.fixedOvertimeAmount ?? ""}
                     name="fixedOvertimeAmount"
                     type="number"
                     min="0"
@@ -550,6 +655,7 @@ export function JobForm() {
               <Field label={text.jobDescription}>
                 <textarea
                   className={textareaClass}
+                  defaultValue={initialJob?.description ?? ""}
                   name="description"
                   rows={9}
                   placeholder={text.jobDescriptionPlaceholder}
@@ -557,28 +663,42 @@ export function JobForm() {
               </Field>
               <div className="grid grid-cols-2 gap-[18px] max-[760px]:grid-cols-1">
                 <DescriptionField
+                  defaultValue={initialJob?.applicationRequirements}
                   name="applicationRequirements"
                   label={text.applicationRequirements}
                 />
                 <DescriptionField
+                  defaultValue={initialJob?.preferredQualifications}
                   name="preferredQualifications"
                   label={text.preferredQualifications}
                 />
                 <DescriptionField
+                  defaultValue={initialJob?.selectionProcess}
                   name="selectionProcess"
                   label={text.selectionProcess}
                 />
                 <DescriptionField
+                  defaultValue={initialJob?.workLocationDetails}
                   name="workLocationDetails"
                   label={text.workLocationDetails}
                 />
                 <DescriptionField
+                  defaultValue={initialJob?.workingHours}
                   name="workingHours"
                   label={text.workingHours}
                 />
-                <DescriptionField name="benefits" label={text.benefits} />
-                <DescriptionField name="holidays" label={text.holidays} />
                 <DescriptionField
+                  defaultValue={initialJob?.benefits}
+                  name="benefits"
+                  label={text.benefits}
+                />
+                <DescriptionField
+                  defaultValue={initialJob?.holidays}
+                  name="holidays"
+                  label={text.holidays}
+                />
+                <DescriptionField
+                  defaultValue={initialJob?.teamEnvironment}
                   name="teamEnvironment"
                   label={text.teamEnvironment}
                 />
@@ -614,6 +734,7 @@ export function JobForm() {
               <Field label={text.notes}>
                 <textarea
                   className={textareaClass}
+                  defaultValue={initialJob?.notes ?? ""}
                   name="notes"
                   rows={6}
                   placeholder={text.notesPlaceholder}
@@ -629,7 +750,12 @@ export function JobForm() {
             <h3 className="mt-1 text-[15px] font-semibold">{text.tracking}</h3>
             <div className="mt-5">
               <Field label={text.currentStatus}>
-                <OptionSelect name="status" options={options.statuses} />
+                <OptionSelect
+                  defaultValue={initialJob?.status}
+                  disabled={isEditMode}
+                  name="status"
+                  options={options.statuses}
+                />
               </Field>
             </div>
             <div className="mt-[18px] rounded-[5px] border border-[#2d2840] bg-[#1b1725] p-3.5">
@@ -649,6 +775,7 @@ export function JobForm() {
                   />
                   <input
                     className={`${fieldClass} pl-9`}
+                    defaultValue={initialJob?.url ?? ""}
                     name="url"
                     type="url"
                     placeholder="https://..."
@@ -699,10 +826,23 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function DescriptionField({ name, label }: { name: string; label: string }) {
+function DescriptionField({
+  name,
+  label,
+  defaultValue,
+}: {
+  name: string;
+  label: string;
+  defaultValue?: string | null;
+}) {
   return (
     <Field label={label}>
-      <textarea className={textareaClass} name={name} rows={5} />
+      <textarea
+        className={textareaClass}
+        defaultValue={defaultValue ?? ""}
+        name={name}
+        rows={5}
+      />
     </Field>
   );
 }
@@ -724,11 +864,15 @@ function InputWithSuffix({
 function OptionSelect({
   options,
   value,
+  defaultValue,
+  disabled,
   onChange,
   name,
 }: {
   options: ReadonlyArray<readonly [string, string]>;
   value?: string;
+  defaultValue?: string;
+  disabled?: boolean;
   onChange?: (value: string) => void;
   name: string;
 }) {
@@ -736,8 +880,11 @@ function OptionSelect({
     <select
       className={fieldClass}
       name={name}
+      disabled={disabled}
       value={value}
-      defaultValue={value === undefined ? options[0][0] : undefined}
+      defaultValue={
+        value === undefined ? (defaultValue ?? options[0][0]) : undefined
+      }
       onChange={onChange ? (event) => onChange(event.target.value) : undefined}
     >
       {options.map(([optionValue, label]) => (
@@ -812,6 +959,8 @@ function SalaryRange({
   minPlaceholder,
   maxPlaceholder,
   suffix,
+  defaultMin,
+  defaultMax,
 }: {
   label: string;
   minLabel: string;
@@ -821,12 +970,15 @@ function SalaryRange({
   minPlaceholder: string;
   maxPlaceholder: string;
   suffix: string;
+  defaultMin?: number | null;
+  defaultMax?: number | null;
 }) {
   return (
     <div className="grid grid-cols-[110px_minmax(0,1fr)_minmax(0,1fr)] items-end gap-3 rounded-[5px] border border-[#211e25] bg-[#111014] p-3 max-[620px]:grid-cols-1">
       <strong className="self-center text-xs text-[#d3cdd7]">{label}</strong>
       <Field label={minLabel}>
         <InputWithSuffix
+          defaultValue={defaultMin ?? ""}
           name={minName}
           type="number"
           min="0"
@@ -836,6 +988,7 @@ function SalaryRange({
       </Field>
       <Field label={maxLabel}>
         <InputWithSuffix
+          defaultValue={defaultMax ?? ""}
           name={maxName}
           type="number"
           min="0"
