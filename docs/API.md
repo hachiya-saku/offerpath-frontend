@@ -96,6 +96,21 @@ type Company = {
 };
 
 type CompanySummary = Pick<Company, 'id' | 'name'>;
+
+type CompanyJob = {
+  id: string;
+  positionName: string;
+  platform: string;
+  status: JobStatus;
+  annualSalaryMin: number | null;
+  annualSalaryMax: number | null;
+  salaryCurrency: string;
+  updatedAt: string;
+};
+
+type CompanyWithJobs = Company & {
+  jobs: CompanyJob[];
+};
 ```
 
 `normalizedName` 是后端用于查重的内部字段，前端通常不需要展示。
@@ -375,9 +390,15 @@ type UpdateUserProfileRequest = {
 
 成功状态：`200`
 
-返回：`Company[]`，按 `updatedAt` 降序。
+返回：`CompanyWithJobs[]`，按 `updatedAt` 降序。每家公司包含按更新时间降序排列的精简岗位数组 `jobs`。
 
-当前没有 `GET /companies/:id` 接口。公司详情页联调时需从公司列表查找，或后续补充详情接口。
+### `GET /companies/:id`
+
+成功状态：`200`
+
+返回：当前用户所属的单个 `CompanyWithJobs`。
+
+公司不存在或不属于当前用户时返回 `404`。
 
 ### `POST /companies`
 
@@ -593,7 +614,6 @@ type CreateInterviewRequest = {
 
 以下前端功能已有静态界面或数据结构，但后端尚无对应接口：
 
-- 单个公司详情 `GET /companies/:id`
 - 技能与个人技术栈 CRUD
 - 岗位技能匹配度计算
 - 仪表盘统计数据

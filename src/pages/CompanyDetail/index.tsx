@@ -1,65 +1,51 @@
 import { ArrowLeft, Building2, ExternalLink, MapPin, UsersRound } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { getCompanyAPI } from "@/api/companies";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { companies, jobs, type JobStatus } from "@/data/mockData";
-
-const copy = {
-  ja: {
-    back: "企業一覧",
-    directory: "COMPANY PROFILE",
-    industry: "業界",
-    size: "従業員規模",
-    location: "所在地",
-    website: "Webサイト",
-    notes: "企業メモ",
-    relatedJobs: "登録求人",
-    relatedHint: "この企業に関連付けられた求人",
-    jobs: "件",
-    emptyJobs: "この企業の求人はまだありません",
-    notFound: "企業が見つかりません",
-  },
-  zh: {
-    back: "公司一览",
-    directory: "COMPANY PROFILE",
-    industry: "所属行业",
-    size: "员工规模",
-    location: "所在地",
-    website: "公司网站",
-    notes: "公司备注",
-    relatedJobs: "关联岗位",
-    relatedHint: "已关联到这家公司的岗位",
-    jobs: "个",
-    emptyJobs: "这家公司还没有关联岗位",
-    notFound: "没有找到公司",
-  },
-} as const;
-
-const statusJa: Record<JobStatus, string> = {
-  想投: "応募検討",
-  已投: "応募済み",
-  书类选考: "書類選考",
-  一面: "一次面接",
-  二面: "二次面接",
-  三面: "三次面接",
-  终面: "最終面接",
-  offer: "内定",
-  挂了: "不採用",
-  已放弃: "辞退",
-};
+import { getJobStatusLabel } from "@/i18n/jobLabels";
+import type { Company } from "@/types/companies";
 
 export function CompanyDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { language } = useLanguage();
   const text = copy[language];
-  const company = companies.find((item) => item.id === id);
+  const [company, setCompany] = useState<Company | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  if (!company) {
-    return <div className="grid min-h-[45vh] place-items-center text-sm text-[#77717f]">{text.notFound}</div>;
-  }
+  useEffect(() => {
+    if (!id) {
+      setLoadError(true);
+      setIsLoading(false);
+      return;
+    }
 
-  const companyJobs = jobs.filter((job) => job.company === company.name);
+    let cancelled = false;
+    const loadCompany = async () => {
+      setIsLoading(true);
+      setLoadError(false);
+
+      try {
+        const response = await getCompanyAPI(id);
+        if (!cancelled) setCompany(response.data);
+      } catch {
+        if (!cancelled) setLoadError(true);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void loadCompany();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (isLoading) return <PageMessage>{text.loading}</PageMessage>;
+  if (loadError || !company) return <PageMessage error>{text.notFound}</PageMessage>;
 
   return (
     <div className="grid gap-6">
@@ -72,10 +58,10 @@ export function CompanyDetail() {
           <div className="min-w-0 flex-1">
             <p className="m-0 text-[10px] font-bold text-[#786f82]">{text.directory}</p>
             <h2 className="mb-2 mt-1.5 text-[27px] font-semibold max-[620px]:text-[23px]">{company.name}</h2>
-            <p className="max-w-[760px] break-words text-xs leading-6 text-[#948e9d] [overflow-wrap:anywhere]">{company.description}</p>
+            <p className="max-w-[760px] break-words text-xs leading-6 text-[#948e9d] [overflow-wrap:anywhere]">{company.description ?? text.noDescription}</p>
           </div>
           {company.website && (
-            <Button className="h-[38px] rounded-[5px] border-[#34294b] bg-[#211a2e] px-3 text-[11px] text-[#c5b0f4] hover:bg-[#2a203b] max-[620px]:w-full" variant="outline" type="button" onClick={() => window.open(company.website, "_blank", "noopener,noreferrer")}>
+            <Button className="h-[38px] rounded-[5px] border-[#34294b] bg-[#211a2e] px-3 text-[11px] text-[#c5b0f4] hover:bg-[#2a203b] max-[620px]:w-full" variant="outline" type="button" onClick={() => window.open(company.website!, "_blank", "noopener,noreferrer")}>
               <ExternalLink size={15} />{text.website}
             </Button>
           )}
@@ -93,30 +79,51 @@ export function CompanyDetail() {
         <section className="rounded-md border border-[#211e25] bg-[#151318] p-[21px]">
           <p className="m-0 text-[10px] font-bold text-[#786f82]">NOTES</p>
           <h3 className="mt-1 text-[15px] font-semibold">{text.notes}</h3>
-          <p className="mt-4 text-xs leading-7 text-[#aaa4ae]">{company.notes}</p>
+          <p className="mt-4 whitespace-pre-wrap text-xs leading-7 text-[#aaa4ae]">{company.notes}</p>
         </section>
       )}
 
       <section className="overflow-hidden rounded-md border border-[#211e25] bg-[#151318]">
         <header className="flex items-end justify-between gap-4 border-b border-[#211e25] p-5">
           <div><p className="m-0 text-[10px] font-bold text-[#786f82]">JOBS</p><h3 className="mt-1 text-[15px] font-semibold">{text.relatedJobs}</h3><p className="mt-1 text-[10px] text-[#77717f]">{text.relatedHint}</p></div>
-          <strong className="text-sm text-[#b9a2ed]">{companyJobs.length} {text.jobs}</strong>
+          <strong className="text-sm text-[#b9a2ed]">{company.jobs.length} {text.jobs}</strong>
         </header>
-        {companyJobs.map((job) => (
+        {company.jobs.map((job) => (
           <button className="grid min-h-[72px] w-full grid-cols-[minmax(0,1.3fr)_120px_150px_110px_20px] items-center gap-4 border-0 border-b border-[#211e25] bg-transparent px-5 text-left last:border-b-0 hover:bg-[#19161d] max-[760px]:grid-cols-[minmax(0,1fr)_auto_18px] max-[760px]:gap-y-1 max-[760px]:py-4" key={job.id} type="button" onClick={() => navigate(`/jobs/${job.id}`)}>
-            <div className="min-w-0"><strong className="block truncate text-xs">{job.role}</strong><small className="mt-1 block text-[9px] text-[#77717f]">{job.platform}</small></div>
-            <span className={`status-badge status-${job.status}`}>{language === "ja" ? statusJa[job.status] : job.status}</span>
-            <span className="text-[10px] text-[#aaa4ae] max-[760px]:col-span-2">{job.salary}</span>
-            <span className="text-[9px] text-[#77717f] max-[760px]:col-span-2">{job.updatedAt}</span>
+            <div className="min-w-0"><strong className="block truncate text-xs">{job.positionName}</strong><small className="mt-1 block text-[9px] text-[#77717f]">{job.platform}</small></div>
+            <span className={`status-badge status-${job.status}`}>{getJobStatusLabel(job.status, language)}</span>
+            <span className="text-[10px] text-[#aaa4ae] max-[760px]:col-span-2">{formatSalary(job.annualSalaryMin, job.annualSalaryMax, language)}</span>
+            <span className="text-[9px] text-[#77717f] max-[760px]:col-span-2">{formatDate(job.updatedAt, language)}</span>
             <span className="text-[#77717f]">›</span>
           </button>
         ))}
-        {companyJobs.length === 0 && <div className="grid min-h-40 place-items-center text-xs text-[#77717f]">{text.emptyJobs}</div>}
+        {company.jobs.length === 0 && <div className="grid min-h-40 place-items-center text-xs text-[#77717f]">{text.emptyJobs}</div>}
       </section>
     </div>
   );
 }
 
-function Info({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function formatSalary(min: number | null, max: number | null, language: "ja" | "zh") {
+  if (min === null && max === null) return "-";
+  const suffix = language === "ja" ? "万円" : " 万日元";
+  if (min !== null && max !== null) return `${min}〜${max}${suffix}`;
+  if (min !== null) return `${min}${suffix}〜`;
+  return `〜${max}${suffix}`;
+}
+
+function formatDate(value: string, language: "ja" | "zh") {
+  return new Intl.DateTimeFormat(language === "ja" ? "ja-JP" : "zh-CN").format(new Date(value));
+}
+
+function PageMessage({ children, error = false }: { children: ReactNode; error?: boolean }) {
+  return <div className={`grid min-h-[45vh] place-items-center text-sm ${error ? "text-[#d9878e]" : "text-[#77717f]"}`} role={error ? "alert" : undefined}>{children}</div>;
+}
+
+function Info({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return <div className="min-w-0 border-r border-[#211e25] bg-[#151318] p-[18px] last:border-r-0 max-[900px]:border-b max-[520px]:border-r-0"><span className="flex items-center gap-2 text-[9px] text-[#77717f]">{icon}{label}</span><strong className="mt-2 block truncate text-xs text-[#d2ccd6]">{value}</strong></div>;
 }
+
+const copy = {
+  ja: { back: "企業一覧", directory: "COMPANY PROFILE", industry: "業界", size: "従業員規模", location: "所在地", website: "Webサイト", notes: "企業メモ", relatedJobs: "登録求人", relatedHint: "この企業に関連付けられた求人", jobs: "件", emptyJobs: "この企業の求人はまだありません", notFound: "企業情報を取得できませんでした", loading: "企業情報を読み込んでいます...", noDescription: "企業説明はまだ登録されていません。" },
+  zh: { back: "公司一览", directory: "COMPANY PROFILE", industry: "所属行业", size: "员工规模", location: "所在地", website: "公司网站", notes: "公司备注", relatedJobs: "关联岗位", relatedHint: "已关联到这家公司的岗位", jobs: "个", emptyJobs: "这家公司还没有关联岗位", notFound: "公司信息获取失败", loading: "正在读取公司信息...", noDescription: "暂未记录公司介绍。" },
+} as const;
