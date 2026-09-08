@@ -8,7 +8,7 @@ OfferPath is a job application management platform for organizing opportunities 
 
 Backend repository: [offerpath-backend](https://github.com/hachiya-saku/offerpath-backend)
 
-The main frontend screens and core NestJS / PostgreSQL backend APIs are complete. Current work is replacing static data with real API integration. Japanese is the default interface language, with persistent Chinese language switching also available.
+Authentication, profiles, job CRUD, company data, interview management, and application status history are connected to the NestJS / PostgreSQL APIs. Japanese is the default interface language, with persistent Chinese language switching also available.
 
 ## Problems it addresses
 
@@ -19,23 +19,23 @@ The main frontend screens and core NestJS / PostgreSQL backend APIs are complete
 
 ## Current implementation
 
-- Login page
-- Dashboard for tracked jobs, active processes, and average match score
+- Registration, login, automatic token refresh, logout, and protected routes
+- Sample dashboard for tracked jobs, active processes, and average match score
 - Job status visualization powered by ECharts
 - Job list with keyword, status, and platform filters
 - Job form covering annual, monthly, and hourly pay, fixed overtime, employment type, and work mode
 - Structured recruitment content for responsibilities, qualifications, selection process, benefits, and more
 - Job detail page with skill analysis and a status timeline
 - Online / in-person interview scheduling linked to job status progression
-- Job status correction, mistaken progression undo, and change timeline
+- Constrained status progression, rejected/offer outcomes, and step-by-step undo
 - Interview management with meeting details and Google Maps venue lookup
-- Company directory, search, company detail, and related job views
-- Personal profile and technical skill inventory
+- Persisted company directory, search, details, related jobs, and profile editing
+- Persisted personal profile editing and a sample technical skill inventory
 - Japanese / Chinese language switching with persisted preferences
 - Desktop sidebar and mobile drawer navigation
 - Responsive dark interface
 
-All current data is static sample data. Login, persistence, editing, and deletion are not connected to a backend yet.
+Jobs, companies, interviews, and profiles are persisted in PostgreSQL. Dashboard aggregation and personal skills currently use sample data.
 
 ## Backend integration readiness
 
@@ -44,7 +44,7 @@ All current data is static sample data. Login, persistence, editing, and deletio
 - JWT-based per-user data isolation
 - Current user profile retrieval and updates
 - Persisted job, company, and interview APIs
-- Job status correction, change history, and interview undo
+- Constrained job status progression, change history, and step-by-step undo
 - Prisma / PostgreSQL, unit tests, E2E tests, and GitHub Actions CI
 
 ## Application statuses
@@ -54,7 +54,7 @@ Interested -> Applied -> Screening -> 1st Interview -> 2nd Interview -> 3rd Inte
      \________________________________________________________________________________ Rejected
 ```
 
-Because recruitment processes differ between companies, the final product will allow users to move freely between statuses.
+Interview stages can skip forward to match each company's process, while mistakes can only be undone one effective change at a time.
 
 ## Tech stack
 
@@ -77,10 +77,12 @@ Because recruitment processes differ between companies, the final product will a
 
 ```text
 /login       Login
+/register    Registration
 /            Dashboard
 /jobs        Job list
 /jobs/new    New job
 /jobs/:id    Job detail
+/jobs/:id/edit Edit job
 /companies   Company directory
 /companies/:id Company detail
 /interviews  Interview management
@@ -89,14 +91,13 @@ Because recruitment processes differ between companies, the final product will a
 
 ## Roadmap
 
-1. Integrate real APIs for login, token refresh, logout, and profiles
-2. Migrate job, company, and interview screens from static to persisted data
-3. Add job filtering, sorting, and pagination
-4. Add personal skill management and weighted match scoring
-5. Add dashboard aggregation APIs and conversion metrics
-6. Add non-AI structured parsing from job URLs
-7. Complete Japanese / Chinese copy and layout checks
-8. Add Docker Compose and production deployment
+1. Add server-side job filtering, sorting, and pagination
+2. Add company suggestions to the job form
+3. Add interview editing/deletion, personal skill management, and match scoring
+4. Add dashboard aggregation APIs and conversion metrics
+5. Add non-AI structured parsing from job URLs
+6. Complete Japanese / Chinese copy and layout checks
+7. Add Docker Compose and production deployment
 
 ## Local development
 
@@ -117,4 +118,4 @@ npm run preview  # Preview the production build
 
 ## Project status
 
-The main static screens, responsive layouts, backend authentication, and core business APIs are complete. Current work focuses on frontend authentication integration and replacing sample content with persisted data.
+The main authentication, job, company, interview, and profile workflows use real APIs. Remaining MVP work centers on pagination, skills, dashboard metrics, URL parsing, and deployment.
