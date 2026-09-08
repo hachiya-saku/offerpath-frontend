@@ -1,7 +1,11 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { refreshTokenAPI } from "@/api/auth";
 import { getUserProfileAPI } from "@/api/users";
-import { clearCredentials, setCredentials } from "@/store/authSlice";
+import {
+  clearCredentials,
+  setAccessToken,
+  setCredentials,
+} from "@/store/authSlice";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 type AuthBootstrapProps = {
@@ -21,8 +25,9 @@ export function AuthBootstrap({ children }: AuthBootstrapProps) {
       try {
         const refreshResponse = await refreshTokenAPI();
         const accessToken = refreshResponse.data.accessToken;
+        dispatch(setAccessToken(accessToken));
 
-        const profileResponse = await getUserProfileAPI(accessToken);
+        const profileResponse = await getUserProfileAPI();
 
         dispatch(setCredentials({ accessToken, user: profileResponse.data }));
       } catch {

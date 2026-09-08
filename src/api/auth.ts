@@ -13,14 +13,6 @@ export function registerAPI(data: RegisterRequest) {
   return http.post<RegisterResponse>("/auth/register", data);
 }
 
-export function logoutAPI(accessToken: string) {
-  return http.post<LogoutResponse>(
-    "/auth/logout",
-    undefined,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
-  );
+export function logoutAPI() {
+  return http.post<LogoutResponse>("/auth/logout");
 }

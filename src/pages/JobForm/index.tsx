@@ -19,7 +19,6 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { useAppSelector } from "@/store/hooks";
 import { createJobAPI, getJobAPI, updateJobAPI } from "@/api/jobs";
 import type {
   CreateJobRequest,
@@ -266,33 +265,23 @@ export function JobForm() {
   const [required, setRequired] = useState(["React", "TypeScript"]);
   const [bonus, setBonus] = useState(["Next.js"]);
   const [includesFixedOvertime, setIncludesFixedOvertime] = useState(false);
-  const accessToken = useAppSelector((state) => state.auth.accessToken);
   const [initialJob, setInitialJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(isEditMode);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>("");
 
   useEffect(() => {
     if (!isEditMode || !id) return;
 
-    if (!accessToken) {
-      setSaveError(
-        language === "ja"
-          ? "アクセストークンがありません。ログインしてください。"
-          : "没有访问令牌，请登录。",
-      );
-      setIsLoading(false);
-      return;
-    }
-
     let cancelled = false;
 
     const fetchJob = async () => {
       setIsLoading(true);
-      setSaveError("");
+      setLoadFailed(false);
 
       try {
-        const response = await getJobAPI(accessToken, id);
+        const response = await getJobAPI(id);
 
         if (!cancelled) {
           setInitialJob(response.data);
@@ -301,7 +290,7 @@ export function JobForm() {
           setIncludesFixedOvertime(response.data.includesFixedOvertime);
         }
       } catch {
-        if (!cancelled) setSaveError(text.loadError);
+        if (!cancelled) setLoadFailed(true);
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -312,19 +301,10 @@ export function JobForm() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, id, isEditMode, language, text.loadError]);
+  }, [id, isEditMode]);
 
   const submit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!accessToken) {
-      setSaveError(
-        language === "ja"
-          ? "アクセストークンがありません。ログインしてください。"
-          : "没有访问令牌，请登录。",
-      );
-      return;
-    }
-
     setIsSaving(true);
     setSaveError("");
 
@@ -389,10 +369,10 @@ export function JobForm() {
     try {
       if (isEditMode && id) {
         const { status: _status, ...updateData } = data;
-        await updateJobAPI(accessToken, id, updateData);
+        await updateJobAPI(id, updateData);
         navigate(`/jobs/${id}`, { replace: true });
       } else {
-        await createJobAPI(accessToken, data);
+        await createJobAPI(data);
         navigate("/jobs", { replace: true });
       }
     } catch {
@@ -404,7 +384,7 @@ export function JobForm() {
     }
   };
 
-  if (isLoading || (isEditMode && initialJob?.id !== id && !saveError)) {
+  if (isLoading || (isEditMode && initialJob?.id !== id && !loadFailed)) {
     return (
       <p className="py-12 text-center text-xs text-[#948e9d]">
         {text.loading}
@@ -418,7 +398,7 @@ export function JobForm() {
         className="py-12 text-center text-xs text-[#ef9aa2]"
         role="alert"
       >
-        {saveError || text.loadError}
+        {text.loadError}
       </p>
     );
   }

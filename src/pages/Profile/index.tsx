@@ -13,7 +13,7 @@ import { getExperienceLabel, getSkillLevelLabel } from "@/i18n/jobLabels";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getUserProfileAPI, updateUserProfileAPI } from "@/api/users";
-import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { useAppDispatch } from "@/store/hooks";
 import type { UserProfile, UpdateProfileRequest } from "@/types/auth";
 import { EditProfileDialog } from "./EditProfileDialog";
 import { updateCurrentUser } from "@/store/authSlice";
@@ -36,7 +36,6 @@ const levelTones: Record<string, string> = {
 export function Profile() {
   const { language } = useLanguage();
   const text = profileCopy[language];
-  const accessToken = useAppSelector((state) => state.auth.accessToken);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -46,12 +45,6 @@ export function Profile() {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    if (!accessToken) {
-      setHasError(true);
-      setLoading(false);
-      return;
-    }
-
     let cancelled = false;
 
     const loadUserProfile = async () => {
@@ -59,7 +52,7 @@ export function Profile() {
       setHasError(false);
 
       try {
-        const response = await getUserProfileAPI(accessToken);
+        const response = await getUserProfileAPI();
         if (!cancelled) {
           setUserProfile(response.data);
         }
@@ -79,19 +72,14 @@ export function Profile() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken]);
+  }, []);
 
   const handleSaveProfile = async (data: UpdateProfileRequest) => {
-    if (!accessToken) {
-      setSaveError(text.saveError);
-      return;
-    }
-
     setIsSaving(true);
     setSaveError(null);
 
     try {
-      const response = await updateUserProfileAPI(accessToken, data);
+      const response = await updateUserProfileAPI(data);
       setUserProfile(response.data);
       dispatch(updateCurrentUser(response.data));
       setIsEditOpen(false);

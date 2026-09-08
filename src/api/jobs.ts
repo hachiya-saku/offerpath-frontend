@@ -1,46 +1,25 @@
 import { http } from "./http";
 import type { CreateJobRequest, Job, UpdateJobRequest } from "@/types/jobs";
 
-export function getJobsAPI(accessToken: string) {
-  return http.get<Job[]>("/jobs", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+export function getJobsAPI() {
+  return http.get<Job[]>("/jobs");
 }
 
-export function createJobAPI(accessToken: string, data: CreateJobRequest) {
-  return http.post<Job>("/jobs", data, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+export function createJobAPI(data: CreateJobRequest) {
+  return http.post<Job>("/jobs", data);
 }
 
 export function updateJobAPI(
-  accessToken: string,
   jobId: string,
   data: UpdateJobRequest,
 ) {
-  return http.patch<Job>(`/jobs/${jobId}`, data, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  return http.patch<Job>(`/jobs/${jobId}`, data);
 }
 
-export function deleteJobAPI(accessToken: string, jobId: string) {
-  return http.delete<Job>(`/jobs/${jobId}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+export function deleteJobAPI(jobId: string) {
+  return http.delete<Job>(`/jobs/${jobId}`);
 }
 
-export function getJobAPI(accessToken: string, jobId: string) {
-  return http.get<Job>(`/jobs/${jobId}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+export function getJobAPI(jobId: string) {
+  return http.get<Job>(`/jobs/${jobId}`);
 }

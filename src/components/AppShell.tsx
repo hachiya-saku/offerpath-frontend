@@ -58,7 +58,6 @@ export function AppShell() {
   const text = shellCopy[language];
   const location = useLocation();
   const navigate = useNavigate();
-  const accessToken = useAppSelector((state) => state.auth.accessToken);
   const dispatch = useAppDispatch();
   const userName = useAppSelector(
     (state) => state.auth.user?.displayName ?? "User",
@@ -66,12 +65,10 @@ export function AppShell() {
 
   const handleLogout = async () => {
     try {
-      if (accessToken) {
-        await logoutAPI(accessToken);
-      }
-      dispatch(clearCredentials());
+      await logoutAPI();
     } catch {
     } finally {
+      dispatch(clearCredentials());
       navigate("/login", { replace: true });
     }
   };

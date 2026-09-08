@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getJobStatusLabel } from "@/i18n/jobLabels";
 import { getJobsAPI } from "@/api/jobs";
-import { useAppSelector } from "@/store/hooks";
 import type { Job as ApiJob } from "@/types/jobs";
 import "./style.css";
 
@@ -64,14 +63,11 @@ export function Jobs() {
   const [salaryMax, setSalaryMax] = useState("");
   const [minimumMatch, setMinimumMatch] = useState("0");
   const [sortMode, setSortMode] = useState<SortMode>("newest");
-  const accessToken = useAppSelector((state) => state.auth.accessToken);
   const [apiJobs, setApiJobs] = useState<ApiJob[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!accessToken) return;
-
     let cancelled = false;
 
     const loadJobsData = async () => {
@@ -79,7 +75,7 @@ export function Jobs() {
       setLoadError(false);
 
       try {
-        const response = await getJobsAPI(accessToken);
+        const response = await getJobsAPI();
         if (!cancelled) {
           setApiJobs(response.data);
         }
@@ -99,7 +95,7 @@ export function Jobs() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken]);
+  }, []);
 
   const jobs = useMemo(
     () =>

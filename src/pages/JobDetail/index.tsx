@@ -19,7 +19,6 @@ import { getJobStatusLabel } from "@/i18n/jobLabels";
 import { InterviewScheduleDialog } from "./InterviewScheduleDialog";
 import { DeleteJobDialog } from "./DeleteJobDialog";
 import { type Job } from "@/types/jobs";
-import { useAppSelector } from "@/store/hooks";
 import { StatusCorrectionDialog } from "./StatusCorrectionDialog";
 import { deleteJobAPI, getJobAPI } from "@/api/jobs";
 
@@ -120,7 +119,6 @@ export function JobDetail() {
     getJobStatusHistory(job.id),
   );
   const availableStatuses = getAvailableInterviewStatuses(currentStatus);
-  const accessToken = useAppSelector((state) => state.auth.accessToken);
   const [apiJob, setApiJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
@@ -129,11 +127,11 @@ export function JobDetail() {
   const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
-    if (!accessToken || !id) {
+    if (!id) {
       setError(
         language === "ja"
-          ? "求人IDまたはログイン状態を確認できません。"
-          : "无法确认岗位 ID 或登录状态。",
+          ? "求人IDを確認できません。"
+          : "无法确认岗位 ID。",
       );
       return;
     }
@@ -145,7 +143,7 @@ export function JobDetail() {
       setError("");
 
       try {
-        const response = await getJobAPI(accessToken, id);
+        const response = await getJobAPI(id);
 
         if (!cancelled) {
           setApiJob(response.data);
@@ -170,10 +168,10 @@ export function JobDetail() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, id, language]);
+  }, [id, language]);
 
   const handleDelete = async () => {
-    if (!accessToken || !id) {
+    if (!id) {
       setDeleteError(text.deleteError);
       return;
     }
@@ -182,7 +180,7 @@ export function JobDetail() {
     setDeleteError("");
 
     try {
-      await deleteJobAPI(accessToken, id);
+      await deleteJobAPI(id);
       navigate("/jobs", { replace: true });
     } catch {
       setDeleteError(text.deleteError);

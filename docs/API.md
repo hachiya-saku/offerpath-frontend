@@ -28,6 +28,10 @@ Refresh Token 保存在 `HttpOnly Cookie` 中，不会出现在响应 JSON，也
 withCredentials: true
 ```
 
+前端的 Axios 实例已经统一配置认证拦截器：请求拦截器会从 Redux 读取 Access Token 并自动写入请求头，因此各 API 方法不需要接收或手动传入 Token。受保护接口返回 `401` 时，响应拦截器会使用 HttpOnly Cookie 刷新 Token，并自动重试原请求。
+
+多个请求同时返回 `401` 时只会发起一次刷新请求；刷新失败后会清空 Redux 中的认证信息，由路由鉴权跳转到登录页。登录、注册和刷新接口本身不会触发自动刷新，避免形成循环请求。
+
 ## 通用错误
 
 NestJS 错误响应通常为：
