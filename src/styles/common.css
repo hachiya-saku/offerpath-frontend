@@ -16,5 +16,10 @@
 .status-挂了 { border-color: #4b2c32; color: #d9878e; background: #28181c; }
 .status-已放弃 { border-color: #464149; color: #aaa3ae; background: #211e23; }
 .status-已投, .status-书类选考 { border-color: #4c4126; color: #ddbd70; background: #292216; }
+.status-FIRST_INTERVIEW, .status-SECOND_INTERVIEW, .status-THIRD_INTERVIEW, .status-FINAL_INTERVIEW { border-color: #274259; color: #87b9ea; background: #162532; }
+.status-OFFER { border-color: #245046; color: #68d8c2; background: #142b27; }
+.status-REJECTED { border-color: #4b2c32; color: #d9878e; background: #28181c; }
+.status-WITHDRAWN { border-color: #464149; color: #aaa3ae; background: #211e23; }
+.status-APPLIED, .status-DOCUMENT_SCREENING { border-color: #4c4126; color: #ddbd70; background: #292216; }
 .mini-progress { display: block; height: 4px; overflow: hidden; background: #29252e; }
 .mini-progress i { display: block; height: 100%; }

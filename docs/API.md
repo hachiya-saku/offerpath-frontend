@@ -505,24 +505,39 @@ type CreateJobRequest = {
 
 关联面试、岗位技能和状态历史会随岗位一起删除。
 
-### `PATCH /jobs/:id/status`
+### `PATCH /jobs/:id/status/advance`
 
-用于纠正误操作或自由调整岗位状态。
+按顺序推进投递初期状态，不需要请求体。
 
-请求：
+```text
+WISHLIST → APPLIED → DOCUMENT_SCREENING
+```
+
+成功状态：`200`，返回更新后的 `Job`。到达书类选考后，后续面试阶段必须通过创建面试推进。
+
+### `PATCH /jobs/:id/status/reject`
+
+将仍在进行中的岗位标记为 `REJECTED`。可从想投、已投、书类选考或任意面试阶段执行。
 
 ```ts
-type CorrectJobStatusRequest = {
-  status: JobStatus;
+type RejectJobRequest = {
   reason?: string; // 最多 500 字符
 };
 ```
 
-成功状态：`200`
+成功状态：`200`，返回更新后的 `Job`。
 
-返回：更新后的 `Job`
+### `PATCH /jobs/:id/status/offer`
 
-如果目标状态与当前状态相同，返回 `400`。成功后会创建 `CORRECTION` 状态历史。
+将处于任意面试阶段的岗位标记为 `OFFER`，不需要请求体。
+
+成功状态：`200`，返回更新后的 `Job`。
+
+### `PATCH /jobs/:id/status/undo`
+
+撤销当前仍生效的最后一次状态变更，不接收目标状态。可以连续调用，逐步退回更早的状态。
+
+成功状态：`200`，返回更新后的 `Job`。如果被撤销的状态推进来自面试安排，对应面试记录也会一起删除。没有可撤销记录时返回 `400`。
 
 ### `GET /jobs/:id/status-history`
 
@@ -573,16 +588,6 @@ type CreateInterviewRequest = {
 成功状态：`201`
 
 返回：`InterviewWithJob`
-
-### `DELETE /jobs/:jobId/interviews/:interviewId/undo`
-
-撤销最近一次由面试安排引起的状态推进。
-
-成功状态：`200`
-
-返回：恢复上一状态后的 `Job`
-
-只有最新创建的面试，且岗位仍处于该面试轮次时才能撤销。成功后删除面试并创建 `UNDO` 状态历史。
 
 ## 当前未实现的 API
 

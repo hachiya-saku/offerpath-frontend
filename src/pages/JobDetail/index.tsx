@@ -3,6 +3,8 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   CalendarPlus,
+  CircleCheckBig,
+  CircleX,
   ExternalLink,
   FileText,
   MapPin,
@@ -13,29 +15,51 @@ import {
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { jobs, type JobStatus } from "@/data/mockData";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getJobStatusLabel } from "@/i18n/jobLabels";
 import { InterviewScheduleDialog } from "./InterviewScheduleDialog";
 import { DeleteJobDialog } from "./DeleteJobDialog";
-import { type Job } from "@/types/jobs";
-import { StatusCorrectionDialog } from "./StatusCorrectionDialog";
-import { deleteJobAPI, getJobAPI } from "@/api/jobs";
-
+import { RejectJobDialog } from "./RejectJobDialog";
 import {
-  correctJobStatus,
-  getJobStatusHistory,
-  getStoredJobStatus,
-  undoInterview,
-  type InterviewRecord,
-} from "@/data/interviewStore";
+  advanceJobStatusAPI,
+  deleteJobAPI,
+  getJobAPI,
+  getJobStatusHistoryAPI,
+  offerJobStatusAPI,
+  rejectJobStatusAPI,
+  undoJobStatusAPI,
+} from "@/api/jobs";
+import { createInterviewAPI } from "@/api/interviews";
+import type { CreateInterviewRequest } from "@/types/interviews";
+import type { Job, JobStatus, JobStatusHistory } from "@/types/jobs";
 
-const interviewStatuses: JobStatus[] = ["一面", "二面", "三面", "终面"];
+const interviewStatuses: CreateInterviewRequest["round"][] = [
+  "FIRST_INTERVIEW",
+  "SECOND_INTERVIEW",
+  "THIRD_INTERVIEW",
+  "FINAL_INTERVIEW",
+];
 
 function getAvailableInterviewStatuses(status: JobStatus) {
-  if (status === "书类选考") return interviewStatuses;
-  const currentIndex = interviewStatuses.indexOf(status);
+  if (status === "DOCUMENT_SCREENING") return interviewStatuses;
+  const currentIndex = interviewStatuses.indexOf(
+    status as CreateInterviewRequest["round"],
+  );
   return currentIndex === -1 ? [] : interviewStatuses.slice(currentIndex + 1);
+}
+
+function hasUndoableStatusChange(history: JobStatusHistory[]) {
+  let activeChangeCount = 0;
+
+  for (const change of [...history].reverse()) {
+    if (change.changeType === "UNDO") {
+      activeChangeCount = Math.max(0, activeChangeCount - 1);
+    } else {
+      activeChangeCount += 1;
+    }
+  }
+
+  return activeChangeCount > 0;
 }
 
 function formatSalaryRange(
@@ -105,23 +129,17 @@ export function JobDetail() {
   const { language } = useLanguage();
   const text = detailCopy[language];
   const { id } = useParams();
-  const job = jobs.find((item) => item.id === Number(id)) ?? jobs[0];
-  const [currentStatus, setCurrentStatus] = useState<JobStatus>(() =>
-    getStoredJobStatus(job.id, job.status),
-  );
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [correctionOpen, setCorrectionOpen] = useState(false);
-  const [lastChange, setLastChange] = useState<{
-    interview: InterviewRecord;
-    previousStatus: JobStatus;
-  } | null>(null);
-  const [statusHistory, setStatusHistory] = useState(() =>
-    getJobStatusHistory(job.id),
-  );
-  const availableStatuses = getAvailableInterviewStatuses(currentStatus);
   const [apiJob, setApiJob] = useState<Job | null>(null);
+  const [statusHistory, setStatusHistory] = useState<JobStatusHistory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
+  const [isStatusSaving, setIsStatusSaving] = useState(false);
+  const [statusError, setStatusError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [isInterviewSaving, setIsInterviewSaving] = useState(false);
+  const [interviewError, setInterviewError] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -143,10 +161,14 @@ export function JobDetail() {
       setError("");
 
       try {
-        const response = await getJobAPI(id);
+        const [jobResponse, historyResponse] = await Promise.all([
+          getJobAPI(id),
+          getJobStatusHistoryAPI(id),
+        ]);
 
         if (!cancelled) {
-          setApiJob(response.data);
+          setApiJob(jobResponse.data);
+          setStatusHistory(historyResponse.data);
         }
       } catch {
         if (!cancelled) {
@@ -169,6 +191,69 @@ export function JobDetail() {
       cancelled = true;
     };
   }, [id, language]);
+
+  const refreshStatusHistory = async () => {
+    if (!id) return;
+    const response = await getJobStatusHistoryAPI(id);
+    setStatusHistory(response.data);
+  };
+
+  const runStatusAction = async (
+    action: () => Promise<{ data: Job }>,
+    successMessage: string,
+  ) => {
+    setIsStatusSaving(true);
+    setStatusError("");
+
+    try {
+      const response = await action();
+      setApiJob(response.data);
+      setStatusMessage(successMessage);
+
+      try {
+        await refreshStatusHistory();
+      } catch {
+        setStatusError(text.historyError);
+      }
+
+      return true;
+    } catch {
+      setStatusError(text.statusError);
+      return false;
+    } finally {
+      setIsStatusSaving(false);
+    }
+  };
+
+  const handleUndo = async () => {
+    if (!id) return;
+    await runStatusAction(() => undoJobStatusAPI(id), text.undoSuccess);
+  };
+
+  const handleInterviewSave = async (data: CreateInterviewRequest) => {
+    if (!id) return;
+    setIsInterviewSaving(true);
+    setInterviewError("");
+
+    try {
+      await createInterviewAPI(id, data);
+      setApiJob((currentJob) =>
+        currentJob ? { ...currentJob, status: data.round } : currentJob,
+      );
+      setStatusMessage(text.interviewSaved);
+      setScheduleOpen(false);
+
+      try {
+        await refreshStatusHistory();
+      } catch {
+        setStatusError(text.historyError);
+      }
+    } catch {
+      setInterviewError(text.interviewError);
+    } finally {
+      setIsInterviewSaving(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!id) {
@@ -200,6 +285,17 @@ export function JobDetail() {
   if (!apiJob) {
     return null;
   }
+
+  const currentStatus = apiJob.status;
+  const availableStatuses = getAvailableInterviewStatuses(currentStatus);
+  const canAdvance = ["WISHLIST", "APPLIED"].includes(currentStatus);
+  const canReject = !["OFFER", "REJECTED", "WITHDRAWN"].includes(
+    currentStatus,
+  );
+  const canOffer = interviewStatuses.includes(
+    currentStatus as CreateInterviewRequest["round"],
+  );
+  const canUndo = hasUndoableStatusChange(statusHistory);
 
   return (
     <div className="grid gap-6">
@@ -242,8 +338,9 @@ export function JobDetail() {
               variant="ghost"
               size="icon"
               type="button"
-              title={text.correctStatus}
-              onClick={() => setCorrectionOpen(true)}
+              title={text.undoLastStatus}
+              disabled={isStatusSaving || !canUndo}
+              onClick={() => void handleUndo()}
             >
               <RotateCcw size={17} />
             </Button>
@@ -257,14 +354,66 @@ export function JobDetail() {
             <strong className={`status-badge status-${currentStatus}`}>
               {getJobStatusLabel(currentStatus, language)}
             </strong>
+            {canAdvance && (
+              <button
+                className="mt-1 flex w-fit items-center gap-1 border-0 bg-transparent p-0 text-[9px] text-[#b69bf2] hover:text-[#d6c9f4] disabled:opacity-50"
+                disabled={isStatusSaving}
+                onClick={() =>
+                  void runStatusAction(
+                    () => advanceJobStatusAPI(apiJob.id),
+                    text.advanceSuccess,
+                  )
+                }
+                type="button"
+              >
+                <CircleCheckBig size={13} />
+                {currentStatus === "WISHLIST"
+                  ? text.advanceToApplied
+                  : text.advanceToScreening}
+              </button>
+            )}
             {availableStatuses.length > 0 && (
               <button
                 type="button"
                 className="mt-1 flex w-fit items-center gap-1 border-0 bg-transparent p-0 text-[9px] text-[#b69bf2] hover:text-[#d6c9f4]"
-                onClick={() => setScheduleOpen(true)}
+                disabled={isStatusSaving}
+                onClick={() => {
+                  setInterviewError("");
+                  setScheduleOpen(true);
+                }}
               >
                 <CalendarPlus size={13} />
                 {text.schedule}
+              </button>
+            )}
+            {canOffer && (
+              <button
+                className="mt-1 flex w-fit items-center gap-1 border-0 bg-transparent p-0 text-[9px] text-[#60cfbc] hover:text-[#8be6d6] disabled:opacity-50"
+                disabled={isStatusSaving}
+                onClick={() =>
+                  void runStatusAction(
+                    () => offerJobStatusAPI(apiJob.id),
+                    text.offerSuccess,
+                  )
+                }
+                type="button"
+              >
+                <CircleCheckBig size={13} />
+                {text.markOffer}
+              </button>
+            )}
+            {canReject && (
+              <button
+                className="mt-1 flex w-fit items-center gap-1 border-0 bg-transparent p-0 text-[9px] text-[#d9878e] hover:text-[#f1a0a7] disabled:opacity-50"
+                disabled={isStatusSaving}
+                onClick={() => {
+                  setStatusError("");
+                  setRejectOpen(true);
+                }}
+                type="button"
+              >
+                <CircleX size={13} />
+                {text.markRejected}
               </button>
             )}
           </div>
@@ -292,31 +441,30 @@ export function JobDetail() {
           </div>
         </div>
       </section>
-      {lastChange && (
+      {statusMessage && (
         <div className="flex items-center justify-between gap-4 rounded-[5px] border border-[#49386b] bg-[#1d1729] px-4 py-3 text-xs text-[#cdbdf0]">
-          <span>{text.statusAdvanced}</span>
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-7 text-[#b99bea] hover:bg-[#2a203b] hover:text-white"
-            onClick={() => {
-              if (
-                undoInterview(
-                  lastChange.interview.id,
-                  job.id,
-                  lastChange.previousStatus,
-                )
-              ) {
-                setCurrentStatus(lastChange.previousStatus);
-                setStatusHistory(getJobStatusHistory(job.id));
-              }
-              setLastChange(null);
-            }}
-          >
-            <RotateCcw size={14} />
-            {text.undo}
-          </Button>
+          <span>{statusMessage}</span>
+          {canUndo && (
+            <Button
+              className="h-7 text-[#b99bea] hover:bg-[#2a203b] hover:text-white"
+              disabled={isStatusSaving}
+              onClick={() => void handleUndo()}
+              type="button"
+              variant="ghost"
+            >
+              <RotateCcw size={14} />
+              {text.undo}
+            </Button>
+          )}
         </div>
+      )}
+      {statusError && (
+        <p
+          className="m-0 rounded-[5px] border border-[#5a2e36] bg-[#27171c] px-4 py-3 text-xs text-[#ef9aa2]"
+          role="alert"
+        >
+          {statusError}
+        </p>
       )}
       <div className="grid grid-cols-[minmax(0,1fr)_320px] items-start gap-[18px] max-[1050px]:grid-cols-1">
         <div className="grid gap-[18px]">
@@ -558,32 +706,28 @@ export function JobDetail() {
       </div>
       {scheduleOpen && availableStatuses.length > 0 && (
         <InterviewScheduleDialog
-          job={job}
-          previousStatus={currentStatus}
           availableStatuses={availableStatuses}
+          error={interviewError}
+          isSaving={isInterviewSaving}
+          job={apiJob}
           onClose={() => setScheduleOpen(false)}
-          onSaved={(interview) => {
-            setLastChange({ interview, previousStatus: currentStatus });
-            setCurrentStatus(interview.round);
-            setStatusHistory(getJobStatusHistory(job.id));
-            setScheduleOpen(false);
-          }}
+          onSave={handleInterviewSave}
         />
       )}
-      {correctionOpen && (
-        <StatusCorrectionDialog
-          jobId={job.id}
-          currentStatus={currentStatus}
-          onClose={() => setCorrectionOpen(false)}
-          onCorrect={(status, reason) => {
-            correctJobStatus(job.id, currentStatus, status, reason);
-            setCurrentStatus(status);
-            setStatusHistory(getJobStatusHistory(job.id));
-            setLastChange(null);
-            setCorrectionOpen(false);
-          }}
-        />
-      )}
+      <RejectJobDialog
+        error={statusError}
+        isSaving={isStatusSaving}
+        language={language}
+        onClose={() => setRejectOpen(false)}
+        onConfirm={async (reason) => {
+          const succeeded = await runStatusAction(
+            () => rejectJobStatusAPI(apiJob.id, { reason }),
+            text.rejectSuccess,
+          );
+          if (succeeded) setRejectOpen(false);
+        }}
+        open={rejectOpen}
+      />
       <DeleteJobDialog
         error={deleteError}
         isDeleting={isDeleting}
@@ -601,7 +745,7 @@ const detailCopy = {
   ja: {
     jobs: "求人一覧",
     edit: "編集",
-    correctStatus: "ステータスを修正",
+    undoLastStatus: "直前のステータスに戻す",
     currentStatus: "現在のステータス",
     schedule: "面接を設定",
     skillMatch: "スキルマッチ度",
@@ -628,8 +772,18 @@ const detailCopy = {
     notes: "求人メモ",
     source: "求人情報元",
     timeline: "ステータス履歴",
-    statusAdvanced:
-      "ステータスを更新しました。選択を間違えた場合は取り消せます。",
+    advanceToApplied: "応募済みに進める",
+    advanceToScreening: "書類選考に進める",
+    markRejected: "不採用にする",
+    markOffer: "内定として記録",
+    advanceSuccess: "ステータスを次の段階へ進めました。",
+    rejectSuccess: "不採用として記録しました。",
+    offerSuccess: "内定として記録しました。",
+    undoSuccess: "直前のステータスに戻しました。",
+    interviewSaved: "面接を保存し、ステータスを更新しました。",
+    statusError: "ステータスを更新できませんでした。",
+    historyError: "ステータスは更新されましたが、履歴を再取得できませんでした。",
+    interviewError: "面接を保存できませんでした。入力内容を確認してください。",
     undo: "取り消す",
     advanced: "進行",
     corrected: "修正",
@@ -640,7 +794,7 @@ const detailCopy = {
   zh: {
     jobs: "岗位一览",
     edit: "编辑",
-    correctStatus: "修正岗位状态",
+    undoLastStatus: "退回上一个状态",
     currentStatus: "当前状态",
     schedule: "安排面试",
     skillMatch: "技能匹配度",
@@ -667,7 +821,18 @@ const detailCopy = {
     notes: "岗位备注",
     source: "岗位来源",
     timeline: "状态记录",
-    statusAdvanced: "岗位状态已推进，如果刚才选错可以立即撤销。",
+    advanceToApplied: "推进到已投",
+    advanceToScreening: "推进到书类选考",
+    markRejected: "标记为挂了",
+    markOffer: "记录为 Offer",
+    advanceSuccess: "岗位已推进到下一个阶段。",
+    rejectSuccess: "已记录为未通过。",
+    offerSuccess: "已记录为 Offer。",
+    undoSuccess: "已退回上一个状态。",
+    interviewSaved: "面试已保存，岗位状态已更新。",
+    statusError: "岗位状态更新失败。",
+    historyError: "岗位状态已更新，但状态记录刷新失败。",
+    interviewError: "面试保存失败，请检查输入内容。",
     undo: "撤销",
     advanced: "推进",
     corrected: "修正",

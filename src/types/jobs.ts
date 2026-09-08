@@ -10,6 +10,22 @@ export type JobStatus =
   | "REJECTED"
   | "WITHDRAWN";
 
+export type JobStatusChangeType = "ADVANCE" | "CORRECTION" | "UNDO";
+
+export type JobStatusHistory = {
+  id: string;
+  jobId: string;
+  fromStatus: JobStatus;
+  toStatus: JobStatus;
+  changeType: JobStatusChangeType;
+  reason: string | null;
+  createdAt: string;
+};
+
+export type RejectJobRequest = {
+  reason?: string;
+};
+
 export type EmploymentType =
   | "FULL_TIME"
   | "CONTRACT"

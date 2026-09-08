@@ -1,5 +1,11 @@
 import { http } from "./http";
-import type { CreateJobRequest, Job, UpdateJobRequest } from "@/types/jobs";
+import type {
+  CreateJobRequest,
+  Job,
+  JobStatusHistory,
+  RejectJobRequest,
+  UpdateJobRequest,
+} from "@/types/jobs";
 
 export function getJobsAPI() {
   return http.get<Job[]>("/jobs");
@@ -22,4 +28,24 @@ export function deleteJobAPI(jobId: string) {
 
 export function getJobAPI(jobId: string) {
   return http.get<Job>(`/jobs/${jobId}`);
+}
+
+export function getJobStatusHistoryAPI(jobId: string) {
+  return http.get<JobStatusHistory[]>(`/jobs/${jobId}/status-history`);
+}
+
+export function advanceJobStatusAPI(jobId: string) {
+  return http.patch<Job>(`/jobs/${jobId}/status/advance`);
+}
+
+export function rejectJobStatusAPI(jobId: string, data: RejectJobRequest) {
+  return http.patch<Job>(`/jobs/${jobId}/status/reject`, data);
+}
+
+export function offerJobStatusAPI(jobId: string) {
+  return http.patch<Job>(`/jobs/${jobId}/status/offer`);
+}
+
+export function undoJobStatusAPI(jobId: string) {
+  return http.patch<Job>(`/jobs/${jobId}/status/undo`);
 }

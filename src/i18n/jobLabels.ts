@@ -1,7 +1,10 @@
 import type { JobStatus } from "@/data/mockData";
+import type { JobStatus as ApiJobStatus } from "@/types/jobs";
 import type { Language } from "@/i18n/LanguageContext";
 
-const statusLabels: Record<JobStatus, Record<Language, string>> = {
+type SupportedJobStatus = JobStatus | ApiJobStatus;
+
+const statusLabels: Record<SupportedJobStatus, Record<Language, string>> = {
   想投: { ja: "応募検討", zh: "想投" },
   已投: { ja: "応募済み", zh: "已投" },
   书类选考: { ja: "書類選考", zh: "书类选考" },
@@ -12,6 +15,16 @@ const statusLabels: Record<JobStatus, Record<Language, string>> = {
   offer: { ja: "内定", zh: "Offer" },
   挂了: { ja: "不採用", zh: "挂了" },
   已放弃: { ja: "辞退", zh: "已放弃" },
+  WISHLIST: { ja: "応募検討", zh: "想投" },
+  APPLIED: { ja: "応募済み", zh: "已投" },
+  DOCUMENT_SCREENING: { ja: "書類選考", zh: "书类选考" },
+  FIRST_INTERVIEW: { ja: "一次面接", zh: "一面" },
+  SECOND_INTERVIEW: { ja: "二次面接", zh: "二面" },
+  THIRD_INTERVIEW: { ja: "三次面接", zh: "三面" },
+  FINAL_INTERVIEW: { ja: "最終面接", zh: "终面" },
+  OFFER: { ja: "内定", zh: "Offer" },
+  REJECTED: { ja: "不採用", zh: "挂了" },
+  WITHDRAWN: { ja: "辞退", zh: "已放弃" },
 };
 
 const skillLevelLabels: Record<string, Record<Language, string>> = {
@@ -28,7 +41,10 @@ const experienceLabels: Record<string, Record<Language, string>> = {
   学习中: { ja: "学習中", zh: "学习中" },
 };
 
-export const getJobStatusLabel = (status: JobStatus, language: Language) =>
+export const getJobStatusLabel = (
+  status: SupportedJobStatus,
+  language: Language,
+) =>
   statusLabels[status][language];
 
 export const getSkillLevelLabel = (level: string, language: Language) =>
