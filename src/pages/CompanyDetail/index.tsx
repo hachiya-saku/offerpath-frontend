@@ -1,11 +1,13 @@
-import { ArrowLeft, Building2, ExternalLink, MapPin, UsersRound } from "lucide-react";
+import { ArrowLeft, Building2, ExternalLink, MapPin, Pencil, UsersRound } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getCompanyAPI } from "@/api/companies";
+import { getCompanyAPI, updateCompanyAPI } from "@/api/companies";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getJobStatusLabel } from "@/i18n/jobLabels";
 import type { Company } from "@/types/companies";
+import type { UpdateCompanyRequest } from "@/types/companies";
+import { EditCompanyDialog } from "./EditCompanyDialog";
 
 export function CompanyDetail() {
   const { id } = useParams();
@@ -15,6 +17,9 @@ export function CompanyDetail() {
   const [company, setCompany] = useState<Company | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     if (!id) {
@@ -44,6 +49,22 @@ export function CompanyDetail() {
     };
   }, [id]);
 
+  const handleSave = async (data: UpdateCompanyRequest) => {
+    if (!id) return;
+    setIsSaving(true);
+    setSaveError("");
+
+    try {
+      const response = await updateCompanyAPI(id, data);
+      setCompany(response.data);
+      setEditOpen(false);
+    } catch {
+      setSaveError(text.saveError);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading) return <PageMessage>{text.loading}</PageMessage>;
   if (loadError || !company) return <PageMessage error>{text.notFound}</PageMessage>;
 
@@ -60,11 +81,16 @@ export function CompanyDetail() {
             <h2 className="mb-2 mt-1.5 text-[27px] font-semibold max-[620px]:text-[23px]">{company.name}</h2>
             <p className="max-w-[760px] break-words text-xs leading-6 text-[#948e9d] [overflow-wrap:anywhere]">{company.description ?? text.noDescription}</p>
           </div>
-          {company.website && (
-            <Button className="h-[38px] rounded-[5px] border-[#34294b] bg-[#211a2e] px-3 text-[11px] text-[#c5b0f4] hover:bg-[#2a203b] max-[620px]:w-full" variant="outline" type="button" onClick={() => window.open(company.website!, "_blank", "noopener,noreferrer")}>
-              <ExternalLink size={15} />{text.website}
+          <div className="flex gap-2 max-[620px]:w-full max-[620px]:flex-wrap">
+            <Button className="h-[38px] rounded-[5px] border-[#34294b] bg-[#211a2e] px-3 text-[11px] text-[#c5b0f4] hover:bg-[#2a203b] max-[620px]:flex-1" variant="outline" type="button" onClick={() => { setSaveError(""); setEditOpen(true); }}>
+              <Pencil size={15} />{text.edit}
             </Button>
-          )}
+            {company.website && (
+              <Button className="h-[38px] rounded-[5px] border-[#34294b] bg-[#211a2e] px-3 text-[11px] text-[#c5b0f4] hover:bg-[#2a203b] max-[620px]:flex-1" variant="outline" type="button" onClick={() => window.open(company.website!, "_blank", "noopener,noreferrer")}>
+                <ExternalLink size={15} />{text.website}
+              </Button>
+            )}
+          </div>
         </div>
       </section>
 
@@ -99,6 +125,15 @@ export function CompanyDetail() {
         ))}
         {company.jobs.length === 0 && <div className="grid min-h-40 place-items-center text-xs text-[#77717f]">{text.emptyJobs}</div>}
       </section>
+      <EditCompanyDialog
+        company={company}
+        isSaving={isSaving}
+        language={language}
+        onClose={() => setEditOpen(false)}
+        onSave={(data) => void handleSave(data)}
+        open={editOpen}
+        saveError={saveError}
+      />
     </div>
   );
 }
@@ -124,6 +159,6 @@ function Info({ icon, label, value }: { icon: ReactNode; label: string; value: s
 }
 
 const copy = {
-  ja: { back: "企業一覧", directory: "COMPANY PROFILE", industry: "業界", size: "従業員規模", location: "所在地", website: "Webサイト", notes: "企業メモ", relatedJobs: "登録求人", relatedHint: "この企業に関連付けられた求人", jobs: "件", emptyJobs: "この企業の求人はまだありません", notFound: "企業情報を取得できませんでした", loading: "企業情報を読み込んでいます...", noDescription: "企業説明はまだ登録されていません。" },
-  zh: { back: "公司一览", directory: "COMPANY PROFILE", industry: "所属行业", size: "员工规模", location: "所在地", website: "公司网站", notes: "公司备注", relatedJobs: "关联岗位", relatedHint: "已关联到这家公司的岗位", jobs: "个", emptyJobs: "这家公司还没有关联岗位", notFound: "公司信息获取失败", loading: "正在读取公司信息...", noDescription: "暂未记录公司介绍。" },
+  ja: { back: "企業一覧", directory: "COMPANY PROFILE", edit: "企業情報を編集", industry: "業界", size: "従業員規模", location: "所在地", website: "Webサイト", notes: "企業メモ", relatedJobs: "登録求人", relatedHint: "この企業に関連付けられた求人", jobs: "件", emptyJobs: "この企業の求人はまだありません", notFound: "企業情報を取得できませんでした", loading: "企業情報を読み込んでいます...", noDescription: "企業説明はまだ登録されていません。", saveError: "企業情報を更新できませんでした。入力内容を確認してください。" },
+  zh: { back: "公司一览", directory: "COMPANY PROFILE", edit: "编辑公司资料", industry: "所属行业", size: "员工规模", location: "所在地", website: "公司网站", notes: "公司备注", relatedJobs: "关联岗位", relatedHint: "已关联到这家公司的岗位", jobs: "个", emptyJobs: "这家公司还没有关联岗位", notFound: "公司信息获取失败", loading: "正在读取公司信息...", noDescription: "暂未记录公司介绍。", saveError: "公司资料更新失败，请检查输入内容。" },
 } as const;

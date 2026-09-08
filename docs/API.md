@@ -406,9 +406,13 @@ type UpdateUserProfileRequest = {
 
 ```ts
 type CreateCompanyRequest = {
-  name: string;    // 必填，最多 120 字符
-  website?: string; // 必须是包含协议的 URL
-  notes?: string;   // 最多 2000 字符
+  name: string;         // 必填，最多 120 字符
+  website?: string;     // 必须是包含协议的 URL
+  industry?: string;    // 最多 120 字符
+  size?: string;        // 最多 80 字符
+  location?: string;    // 最多 200 字符
+  description?: string; // 最多 2000 字符
+  notes?: string;       // 最多 2000 字符
 };
 ```
 
@@ -418,15 +422,23 @@ type CreateCompanyRequest = {
 
 ### `PATCH /companies/:id`
 
-请求字段全部可选，字段规则与创建公司相同：
+请求字段全部可选，字段规则与创建公司相同。除公司名外，可选字段传 `null` 可以清空已有内容：
 
 ```ts
-type UpdateCompanyRequest = Partial<CreateCompanyRequest>;
+type UpdateCompanyRequest = {
+  name?: string;
+  website?: string | null;
+  industry?: string | null;
+  size?: string | null;
+  location?: string | null;
+  description?: string | null;
+  notes?: string | null;
+};
 ```
 
 成功状态：`200`
 
-返回：更新后的 `Company`
+返回：更新后的 `CompanyWithJobs`
 
 ### `DELETE /companies/:id`
 

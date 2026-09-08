@@ -24,3 +24,13 @@ export type Company = {
   updatedAt: string;
   jobs: CompanyJob[];
 };
+
+export type UpdateCompanyRequest = {
+  name?: string;
+  website?: string | null;
+  industry?: string | null;
+  size?: string | null;
+  location?: string | null;
+  description?: string | null;
+  notes?: string | null;
+};
