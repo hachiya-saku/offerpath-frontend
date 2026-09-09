@@ -91,13 +91,15 @@ Interview stages can skip forward to match each company's process, while mistake
 
 ## Roadmap
 
-1. Add server-side job filtering, sorting, and pagination
-2. Add company suggestions to the job form
-3. Add interview editing/deletion, personal skill management, and match scoring
-4. Add dashboard aggregation APIs and conversion metrics
-5. Add non-AI structured parsing from job URLs
-6. Complete Japanese / Chinese copy and layout checks
-7. Add Docker Compose and production deployment
+### MVP release target: 2026-09-13
+
+1. `09-09`: Server-side job search, filtering, sorting, and pagination
+2. `09-10`: Company suggestions, personal skill CRUD, and basic match scoring
+3. `09-11`: Dashboard aggregation APIs and non-AI structured job URL parsing
+4. `09-12`: Frontend integration plus Japanese/Chinese loading, empty, and error-state review
+5. `09-13`: Docker Compose, production deployment, E2E acceptance, screenshots, and final documentation
+
+Post-MVP work includes interview editing/deletion, a unified API response envelope, third-party login, and AI-assisted parsing.
 
 ## Local development
 
