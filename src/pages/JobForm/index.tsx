@@ -2,6 +2,8 @@ import {
   ArrowLeft,
   Banknote,
   BriefcaseBusiness,
+  Check,
+  ChevronDown,
   FileText,
   Link2,
   Plus,
@@ -484,19 +486,11 @@ export function JobForm() {
           >
             <div className="mt-[21px] grid grid-cols-2 gap-[18px] max-[760px]:grid-cols-1">
               <Field label={`${text.companyName} *`}>
-                <input
-                  className={fieldClass}
+                <CompanyNameInput
                   defaultValue={initialJob?.company.name ?? ""}
-                  list="company-name-options"
-                  name="companyName"
-                  required
+                  options={companyNames}
                   placeholder={text.companyPlaceholder}
                 />
-                <datalist id="company-name-options">
-                  {companyNames.map((name) => (
-                    <option key={name} value={name} />
-                  ))}
-                </datalist>
               </Field>
               <Field label={`${text.positionName} *`}>
                 <input
@@ -829,6 +823,117 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <span>{label}</span>
       {children}
     </label>
+  );
+}
+
+function CompanyNameInput({
+  defaultValue,
+  options,
+  placeholder,
+}: {
+  defaultValue: string;
+  options: string[];
+  placeholder: string;
+}) {
+  const [value, setValue] = useState(defaultValue);
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const normalizedValue = value.trim().toLocaleLowerCase();
+  const filteredOptions = options.filter((option) =>
+    option.toLocaleLowerCase().includes(normalizedValue),
+  );
+  const showOptions = isOpen && filteredOptions.length > 0;
+
+  const selectOption = (option: string) => {
+    setValue(option);
+    setIsOpen(false);
+    setActiveIndex(0);
+  };
+
+  return (
+    <div className="relative">
+      <input
+        aria-autocomplete="list"
+        aria-expanded={showOptions}
+        className={`${fieldClass} pr-9`}
+        name="companyName"
+        value={value}
+        required
+        placeholder={placeholder}
+        role="combobox"
+        onBlur={() => setIsOpen(false)}
+        onChange={(event) => {
+          setValue(event.target.value);
+          setActiveIndex(0);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            setIsOpen(false);
+            return;
+          }
+
+          if (!showOptions) return;
+
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setActiveIndex((current) =>
+              Math.min(current + 1, filteredOptions.length - 1),
+            );
+          }
+
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            setActiveIndex((current) => Math.max(current - 1, 0));
+          }
+
+          if (event.key === "Enter") {
+            event.preventDefault();
+            selectOption(filteredOptions[activeIndex]);
+          }
+        }}
+      />
+      <ChevronDown
+        aria-hidden="true"
+        className={`pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#716b79] transition-transform ${showOptions ? "rotate-180" : ""}`}
+        size={14}
+      />
+
+      {showOptions && (
+        <div
+          className="absolute z-30 mt-1.5 max-h-52 w-full overflow-y-auto rounded-[5px] border border-[#3a3245] bg-[#18151d] p-1 shadow-[0_16px_38px_rgba(0,0,0,0.48)]"
+          role="listbox"
+        >
+          {filteredOptions.map((option, index) => {
+            const isSelected = option === value;
+            const isActive = index === activeIndex;
+
+            return (
+              <button
+                aria-selected={isSelected}
+                className={`flex min-h-9 w-full items-center justify-between rounded-[3px] border-0 px-2.5 text-left text-xs transition-colors ${
+                  isActive
+                    ? "bg-[#2a2138] text-[#f4efff]"
+                    : "bg-transparent text-[#c9c2ce] hover:bg-[#211b29] hover:text-white"
+                }`}
+                key={option}
+                role="option"
+                type="button"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => selectOption(option)}
+                onMouseEnter={() => setActiveIndex(index)}
+              >
+                <span className="truncate">{option}</span>
+                {isSelected && (
+                  <Check className="shrink-0 text-[#a879f5]" size={14} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
