@@ -20,6 +20,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { createJobAPI, getJobAPI, updateJobAPI } from "@/api/jobs";
+import { getCompaniesAPI } from "@/api/companies";
 import type {
   CreateJobRequest,
   EmploymentType,
@@ -270,6 +271,25 @@ export function JobForm() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string>("");
+  const [companyNames, setCompanyNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getCompaniesAPI()
+      .then((response) => {
+        if (!cancelled) {
+          setCompanyNames(response.data.map((company) => company.name));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCompanyNames([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isEditMode || !id) return;
@@ -467,10 +487,16 @@ export function JobForm() {
                 <input
                   className={fieldClass}
                   defaultValue={initialJob?.company.name ?? ""}
+                  list="company-name-options"
                   name="companyName"
                   required
                   placeholder={text.companyPlaceholder}
                 />
+                <datalist id="company-name-options">
+                  {companyNames.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
               </Field>
               <Field label={`${text.positionName} *`}>
                 <input
