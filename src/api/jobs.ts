@@ -2,13 +2,15 @@ import { http } from "./http";
 import type {
   CreateJobRequest,
   Job,
+  JobListParams,
+  JobListResponse,
   JobStatusHistory,
   RejectJobRequest,
   UpdateJobRequest,
 } from "@/types/jobs";
 
-export function getJobsAPI() {
-  return http.get<Job[]>("/jobs");
+export function getJobsAPI(params: JobListParams = {}) {
+  return http.get<JobListResponse>("/jobs", { params });
 }
 
 export function createJobAPI(data: CreateJobRequest) {

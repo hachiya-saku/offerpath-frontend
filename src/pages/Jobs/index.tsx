@@ -15,7 +15,11 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getJobStatusLabel } from "@/i18n/jobLabels";
 import { getJobsAPI } from "@/api/jobs";
-import type { Job as ApiJob } from "@/types/jobs";
+import type {
+  Job as ApiJob,
+  JobListResponse,
+  JobListSort,
+} from "@/types/jobs";
 import "./style.css";
 
 const filterLabelClass =
@@ -27,12 +31,7 @@ const selectClass =
 
 const ALL = "ALL";
 
-type SortMode = "newest" | "oldest" | "match" | "salary";
-
-const getSalaryRange = (salary: string) => {
-  const values = salary.match(/\d+/g)?.map(Number) ?? [];
-  return { min: values[0] ?? 0, max: values[1] ?? values[0] ?? 0 };
-};
+type SortMode = JobListSort;
 
 const apiStatusToDisplay: Record<ApiJob["status"], (typeof statuses)[number]> =
   {
@@ -48,12 +47,27 @@ const apiStatusToDisplay: Record<ApiJob["status"], (typeof statuses)[number]> =
     WITHDRAWN: "已放弃",
   };
 
+const displayStatusToApi = Object.fromEntries(
+  Object.entries(apiStatusToDisplay).map(([apiStatus, displayStatus]) => [
+    displayStatus,
+    apiStatus,
+  ]),
+) as Record<(typeof statuses)[number], ApiJob["status"]>;
+
+const emptyFilterOptions: JobListResponse["filterOptions"] = {
+  platforms: [],
+  locations: [],
+  requiredSkills: [],
+  bonusSkills: [],
+};
+
 export function Jobs() {
   const navigate = useNavigate();
   const { language } = useLanguage();
   const text = jobsCopy[language];
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("company") ?? "");
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
   const [status, setStatus] = useState(ALL);
   const [platform, setPlatform] = useState(ALL);
   const [requiredSkill, setRequiredSkill] = useState(ALL);
@@ -64,8 +78,22 @@ export function Jobs() {
   const [minimumMatch, setMinimumMatch] = useState("0");
   const [sortMode, setSortMode] = useState<SortMode>("newest");
   const [apiJobs, setApiJobs] = useState<ApiJob[]>([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 5,
+    total: 0,
+    totalPages: 0,
+  });
+  const [filterOptions, setFilterOptions] =
+    useState<JobListResponse["filterOptions"]>(emptyFilterOptions);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<boolean>(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedQuery(query), 300);
+    return () => window.clearTimeout(timer);
+  }, [query]);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,9 +103,28 @@ export function Jobs() {
       setLoadError(false);
 
       try {
-        const response = await getJobsAPI();
+        const response = await getJobsAPI({
+          page,
+          limit: pagination.limit,
+          search: debouncedQuery.trim() || undefined,
+          status:
+            status === ALL
+              ? undefined
+              : displayStatusToApi[status as (typeof statuses)[number]],
+          platform: platform === ALL ? undefined : platform,
+          requiredSkill: requiredSkill === ALL ? undefined : requiredSkill,
+          bonusSkill: bonusSkill === ALL ? undefined : bonusSkill,
+          location: location === ALL ? undefined : location,
+          salaryMin: salaryMin === "" ? undefined : Number(salaryMin),
+          salaryMax: salaryMax === "" ? undefined : Number(salaryMax),
+          minimumMatch:
+            minimumMatch === "0" ? undefined : Number(minimumMatch),
+          sort: sortMode,
+        });
         if (!cancelled) {
-          setApiJobs(response.data);
+          setApiJobs(response.data.items);
+          setPagination(response.data.meta);
+          setFilterOptions(response.data.filterOptions);
         }
       } catch {
         if (!cancelled) {
@@ -95,7 +142,20 @@ export function Jobs() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [
+    bonusSkill,
+    debouncedQuery,
+    location,
+    minimumMatch,
+    page,
+    pagination.limit,
+    platform,
+    requiredSkill,
+    salaryMax,
+    salaryMin,
+    sortMode,
+    status,
+  ]);
 
   const jobs = useMemo(
     () =>
@@ -123,82 +183,26 @@ export function Jobs() {
 
   const platformOptions = useMemo(
     () => [
-      ...new Set([...recruitmentPlatforms, ...jobs.map((job) => job.platform)]),
+      ...new Set([...recruitmentPlatforms, ...filterOptions.platforms]),
     ],
-    [jobs],
+    [filterOptions.platforms],
   );
-  const locations = useMemo(
-    () => [...new Set(jobs.map((job) => job.location))],
-    [jobs],
-  );
-  const requiredSkills = useMemo(
-    () => [...new Set(jobs.flatMap((job) => job.requiredSkills))].sort(),
-    [jobs],
-  );
-  const bonusSkills = useMemo(
-    () => [...new Set(jobs.flatMap((job) => job.bonusSkills))].sort(),
-    [jobs],
-  );
+  const locations = filterOptions.locations;
+  const requiredSkills = filterOptions.requiredSkills;
+  const bonusSkills = filterOptions.bonusSkills;
+  const pageNumbers = useMemo(() => {
+    const visibleCount = Math.min(pagination.totalPages, 5);
+    const start = Math.max(
+      1,
+      Math.min(page - 2, pagination.totalPages - visibleCount + 1),
+    );
 
-  const filtered = useMemo(
-    () =>
-      jobs
-        .filter((job) => {
-          const normalizedQuery = query.trim().toLowerCase();
-          const salary = getSalaryRange(job.salary);
-          const selectedSalaryMin = Number(salaryMin) || 0;
-          const selectedSalaryMax =
-            Number(salaryMax) || Number.POSITIVE_INFINITY;
-          const matchesQuery = `${job.company} ${job.role}`
-            .toLowerCase()
-            .includes(normalizedQuery);
-          const matchesSalary =
-            salary.max >= selectedSalaryMin && salary.min <= selectedSalaryMax;
-
-          return (
-            matchesQuery &&
-            (status === ALL || job.status === status) &&
-            (platform === ALL || job.platform === platform) &&
-            (requiredSkill === ALL ||
-              job.requiredSkills.includes(requiredSkill)) &&
-            (bonusSkill === ALL || job.bonusSkills.includes(bonusSkill)) &&
-            (location === ALL || job.location === location) &&
-            job.match >= Number(minimumMatch) &&
-            matchesSalary
-          );
-        })
-        .sort((first, second) => {
-          if (sortMode === "oldest") {
-            return first.updatedAtValue - second.updatedAtValue;
-          }
-
-          if (sortMode === "match") {
-            return second.match - first.match;
-          }
-
-          if (sortMode === "salary") {
-            return (
-              getSalaryRange(second.salary).max -
-              getSalaryRange(first.salary).max
-            );
-          }
-
-          return second.updatedAtValue - first.updatedAtValue;
-        }),
-    [
-      bonusSkill,
-      location,
-      minimumMatch,
-      platform,
-      query,
-      requiredSkill,
-      salaryMax,
-      salaryMin,
-      sortMode,
-      status,
-      jobs,
-    ],
-  );
+    return Array.from({ length: visibleCount }, (_, index) => start + index);
+  }, [page, pagination.totalPages]);
+  const paginationLabel =
+    language === "ja"
+      ? `${pagination.page} / ${Math.max(pagination.totalPages, 1)} ページ`
+      : `第 ${pagination.page} 页，共 ${Math.max(pagination.totalPages, 1)} 页`;
 
   const resetFilters = () => {
     setQuery("");
@@ -211,6 +215,7 @@ export function Jobs() {
     setSalaryMax("");
     setMinimumMatch("0");
     setSortMode("newest");
+    setPage(1);
   };
 
   if (isLoading) {
@@ -248,7 +253,7 @@ export function Jobs() {
         </div>
         <div className="flex items-baseline gap-2 border-l-2 border-[#8b5cf6] bg-[#131116] px-3.5 py-2.5 max-[760px]:hidden">
           <strong className="text-[22px] text-[#c9b6ff]">
-            {filtered.length}
+            {pagination.total}
           </strong>
           <span className="text-[11px] text-[#948e9d]">{text.results}</span>
         </div>
@@ -266,7 +271,10 @@ export function Jobs() {
             <input
               className="min-w-0 flex-1 border-0 bg-transparent text-[11px] text-[#cfcad3] outline-none"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setPage(1);
+              }}
               placeholder={text.search}
             />
           </label>
@@ -277,7 +285,10 @@ export function Jobs() {
             <select
               className={`${selectClass} min-w-[110px]`}
               value={status}
-              onChange={(event) => setStatus(event.target.value)}
+              onChange={(event) => {
+                setStatus(event.target.value);
+                setPage(1);
+              }}
             >
               <option value={ALL}>{text.allStatuses}</option>
               {statuses.map((item) => (
@@ -293,7 +304,10 @@ export function Jobs() {
             <select
               className={`${selectClass} min-w-[110px]`}
               value={platform}
-              onChange={(event) => setPlatform(event.target.value)}
+              onChange={(event) => {
+                setPlatform(event.target.value);
+                setPage(1);
+              }}
             >
               <option value={ALL}>{text.allPlatforms}</option>
               {platformOptions.map((item) => (
@@ -308,7 +322,10 @@ export function Jobs() {
             <select
               className={`${selectClass} min-w-[110px]`}
               value={sortMode}
-              onChange={(event) => setSortMode(event.target.value as SortMode)}
+              onChange={(event) => {
+                setSortMode(event.target.value as SortMode);
+                setPage(1);
+              }}
             >
               <option value="newest">{text.newest}</option>
               <option value="oldest">{text.oldest}</option>
@@ -328,7 +345,10 @@ export function Jobs() {
               type="number"
               min="0"
               value={salaryMin}
-              onChange={(event) => setSalaryMin(event.target.value)}
+              onChange={(event) => {
+                setSalaryMin(event.target.value);
+                setPage(1);
+              }}
               placeholder={text.minimum}
             />
             <i className="text-[9px] not-italic text-[#6f6977]">{text.to}</i>
@@ -337,7 +357,10 @@ export function Jobs() {
               type="number"
               min="0"
               value={salaryMax}
-              onChange={(event) => setSalaryMax(event.target.value)}
+              onChange={(event) => {
+                setSalaryMax(event.target.value);
+                setPage(1);
+              }}
               placeholder={text.maximum}
             />
             <em className="text-[9px] not-italic text-[#6f6977]">万円</em>
@@ -349,7 +372,10 @@ export function Jobs() {
             <select
               className={selectClass}
               value={requiredSkill}
-              onChange={(event) => setRequiredSkill(event.target.value)}
+              onChange={(event) => {
+                setRequiredSkill(event.target.value);
+                setPage(1);
+              }}
             >
               <option value={ALL}>{text.allRequiredSkills}</option>
               {requiredSkills.map((item) => (
@@ -362,7 +388,10 @@ export function Jobs() {
             <select
               className={selectClass}
               value={bonusSkill}
-              onChange={(event) => setBonusSkill(event.target.value)}
+              onChange={(event) => {
+                setBonusSkill(event.target.value);
+                setPage(1);
+              }}
             >
               <option value={ALL}>{text.allBonusSkills}</option>
               {bonusSkills.map((item) => (
@@ -375,7 +404,10 @@ export function Jobs() {
             <select
               className={selectClass}
               value={location}
-              onChange={(event) => setLocation(event.target.value)}
+              onChange={(event) => {
+                setLocation(event.target.value);
+                setPage(1);
+              }}
             >
               <option value={ALL}>{text.allLocations}</option>
               {locations.map((item) => (
@@ -388,7 +420,10 @@ export function Jobs() {
             <select
               className={selectClass}
               value={minimumMatch}
-              onChange={(event) => setMinimumMatch(event.target.value)}
+              onChange={(event) => {
+                setMinimumMatch(event.target.value);
+                setPage(1);
+              }}
             >
               <option value="0">{text.unlimited}</option>
               <option value="60">60% {text.orMore}</option>
@@ -419,7 +454,7 @@ export function Jobs() {
           <span>{text.updatedAt}</span>
           <span />
         </div>
-        {filtered.map((job) => (
+        {jobs.map((job) => (
           <button
             className="job-row"
             type="button"
@@ -461,7 +496,7 @@ export function Jobs() {
             <ChevronRight size={17} />
           </button>
         ))}
-        {filtered.length === 0 && (
+        {jobs.length === 0 && (
           <div className="grid min-h-60 place-items-center gap-[7px] text-[#6f6977]">
             <Search size={24} />
             <strong className="text-[13px] text-[#c7c1cb]">{text.empty}</strong>
@@ -480,28 +515,44 @@ export function Jobs() {
         )}
       </section>
       <div className="flex items-center justify-between text-[10px] text-[#6f6977]">
-        <span>{text.pagination}</span>
+        <span>{paginationLabel}</span>
         <div className="flex gap-1">
           <Button
             className="size-9 border-[#2c2831] text-[#a39ca9]"
             variant="ghost"
             size="icon"
-            disabled
+            disabled={page <= 1 || isLoading}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
           >
             <ChevronLeft size={17} />
           </Button>
-          <Button
-            className="size-9 rounded-[5px] border-[#513c78] bg-[#221a35] text-[#c8b5f7]"
-            variant="outline"
-            size="icon"
-          >
-            1
-          </Button>
+          {pageNumbers.map((pageNumber) => (
+            <Button
+              className={
+                pageNumber === page
+                  ? "size-9 rounded-[5px] border-[#513c78] bg-[#221a35] text-[#c8b5f7]"
+                  : "size-9 border-[#2c2831] text-[#a39ca9]"
+              }
+              variant={pageNumber === page ? "outline" : "ghost"}
+              size="icon"
+              type="button"
+              key={pageNumber}
+              disabled={isLoading}
+              onClick={() => setPage(pageNumber)}
+            >
+              {pageNumber}
+            </Button>
+          ))}
           <Button
             className="size-9 border-[#2c2831] text-[#a39ca9]"
             variant="ghost"
             size="icon"
-            disabled
+            disabled={page >= pagination.totalPages || isLoading}
+            onClick={() =>
+              setPage((current) =>
+                Math.min(pagination.totalPages, current + 1),
+              )
+            }
           >
             <ChevronRight size={17} />
           </Button>

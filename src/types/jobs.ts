@@ -84,6 +84,39 @@ export type Job = {
   bonusSkills: string[];
 };
 
+export type JobListSort = "newest" | "oldest" | "match" | "salary";
+
+export type JobListParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: JobStatus;
+  platform?: string;
+  requiredSkill?: string;
+  bonusSkill?: string;
+  location?: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  minimumMatch?: number;
+  sort?: JobListSort;
+};
+
+export type JobListResponse = {
+  items: Job[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  filterOptions: {
+    platforms: string[];
+    locations: string[];
+    requiredSkills: string[];
+    bonusSkills: string[];
+  };
+};
+
 export type CreateJobRequest = {
   companyId?: string;
   companyName?: string;

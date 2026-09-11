@@ -181,6 +181,22 @@ type Job = {
   requiredSkills: string[];
   bonusSkills: string[];
 };
+
+type JobListResponse = {
+  items: Job[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  filterOptions: {
+    platforms: string[];
+    locations: string[];
+    requiredSkills: string[];
+    bonusSkills: string[];
+  };
+};
 ```
 
 年薪与月薪按“万单位”保存，时薪与固定加班金额按基础货币单位保存。接口不自动换算不同薪资类型。
@@ -456,9 +472,30 @@ type UpdateCompanyRequest = {
 
 成功状态：`200`
 
-返回：`Job[]`，包含公司摘要与两类技能数组，按 `updatedAt` 降序。
+查询参数：
 
-当前接口返回全部岗位，尚未实现服务端筛选和分页。
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `page` | number | `1` | 页码，最小为 1 |
+| `limit` | number | `10` | 每页数量，范围 1～50 |
+| `search` | string | - | 按公司名或岗位名模糊搜索 |
+| `status` | `JobStatus` | - | 按岗位状态筛选 |
+| `platform` | string | - | 按招聘平台筛选 |
+| `requiredSkill` | string | - | 按必须技能筛选 |
+| `bonusSkill` | string | - | 按加分技能筛选 |
+| `location` | string | - | 按工作地点筛选 |
+| `salaryMin` | number | - | 岗位年薪区间需覆盖此下限，单位为万 |
+| `salaryMax` | number | - | 岗位年薪区间需覆盖此上限，单位为万 |
+| `minimumMatch` | number | - | 最低匹配度，范围 0～100 |
+| `sort` | string | `newest` | `newest`、`oldest`、`match` 或 `salary` |
+
+示例：
+
+```http
+GET /jobs?page=2&limit=5&status=APPLIED&requiredSkill=React&sort=salary
+```
+
+返回：`JobListResponse`。`items` 是当前页岗位，`meta` 是分页信息，`filterOptions` 来自当前用户的全部岗位，不受当前页和筛选条件限制。
 
 ### `GET /jobs/:id`
 
@@ -629,6 +666,5 @@ type CreateInterviewRequest = {
 - 技能与个人技术栈 CRUD
 - 岗位技能匹配度计算
 - 仪表盘统计数据
-- 岗位服务端筛选、排序与分页
 - 招聘 URL 解析
 - 注册后的邮箱验证、找回密码与第三方登录
