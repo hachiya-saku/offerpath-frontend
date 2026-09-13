@@ -20,7 +20,7 @@ Authentication, profiles, job CRUD, company data, interview management, and appl
 ## Current implementation
 
 - Registration, login, automatic token refresh, logout, and protected routes
-- Sample dashboard for tracked jobs, active processes, and average match score
+- Live API dashboard with job counts, application status, matching, conversion rates, and recent jobs
 - Job status visualization powered by ECharts
 - Job list with keyword, status, and platform filters
 - Job form covering annual, monthly, and hourly pay, fixed overtime, employment type, and work mode
@@ -35,7 +35,7 @@ Authentication, profiles, job CRUD, company data, interview management, and appl
 - Desktop sidebar and mobile drawer navigation
 - Responsive dark interface
 
-Jobs, companies, interviews, profiles, and skills are persisted in PostgreSQL. Dashboard aggregation currently uses sample data.
+Jobs, companies, interviews, profiles, and skills are persisted in PostgreSQL. Dashboard metrics also use real APIs.
 
 ## Backend integration readiness
 
@@ -91,15 +91,13 @@ Interview stages can skip forward to match each company's process, while mistake
 
 ## Roadmap
 
-### MVP release target: 2026-09-13
+### Remaining MVP work
 
-1. `09-09`: Server-side job search, filtering, sorting, and pagination
-2. `09-10`: Company suggestions, personal skill CRUD, and basic match scoring
-3. `09-11`: Dashboard aggregation APIs and non-AI structured job URL parsing
-4. `09-12`: Frontend integration plus Japanese/Chinese loading, empty, and error-state review
-5. `09-13`: Docker Compose, production deployment, E2E acceptance, screenshots, and final documentation
+1. Japanese/Chinese, authorization, common UI-state, and workflow verification
+2. Docker Compose and production deployment
+3. Final E2E acceptance, screenshots, and documentation
 
-Post-MVP work includes interview editing/deletion, a unified API response envelope, third-party login, and AI-assisted parsing.
+Post-MVP work includes URL parsing (non-AI / AI), interview editing/deletion, a unified API response envelope, and third-party login.
 
 ## Local development
 
@@ -120,4 +118,4 @@ npm run preview  # Preview the production build
 
 ## Project status
 
-Authentication, paginated jobs, companies, interviews, profiles, skill CRUD, and matching use real APIs. Remaining MVP work centers on dashboard metrics, URL parsing, Japanese/Chinese verification, and deployment.
+Core workflows and dashboard metrics use real APIs. Remaining MVP work centers on Japanese/Chinese and workflow verification, deployment, and final documentation. URL parsing is post-MVP.

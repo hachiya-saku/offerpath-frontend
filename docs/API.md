@@ -696,10 +696,61 @@ type UpdateSkillRequest = Partial<CreateSkillRequest>;
 匹配度为加权命中得分除以岗位满分，四舍五入为百分比。没有技能要求时返回 `null`，有要求但未命中时为 `0`。
 技能变更后会重新计算自己的岗位，不改变岗位更新时间。`averageMatch` 不计入没有技能要求的岗位；经验时长不参与计算。
 
+## 仪表盘
+
+### `GET /dashboard/summary`
+
+鉴权：需要 Access Token。成功状态：`200`。仅统计当前用户的岗位、技能和面试。
+
+```ts
+type DashboardSummary = {
+  generatedAt: string;
+  totals: {
+    tracked: number;
+    addedThisMonth: number;
+    inProgress: number;
+    upcomingInterviews: number;
+    offers: number;
+    scoredJobs: number;
+    averageMatch: number | null;
+  };
+  statusCounts: Record<JobStatus, number>;
+  conversion: {
+    applied: number;
+    interviewed: number;
+    finalInterview: number;
+    offers: number;
+    interviewRate: number | null;
+    offerRate: number | null;
+  };
+  matchDistribution: { key: string; count: number }[];
+  unscoredJobs: number;
+  recentJobs: {
+    id: string;
+    positionName: string;
+    status: JobStatus;
+    company: CompanySummary;
+    updatedAt: string;
+    matchScore: number | null;
+  }[];
+};
+```
+
+- `tracked`、`statusCounts`、`totals.offers`：按当前状态统计。
+- `inProgress`：已投、书类选考和各面试阶段，不包含想投与结束状态。
+- `addedThisMonth`：创建时间位于日本时区当前月。
+- `upcomingInterviews`：当前仍处于面试阶段的岗位中，预约时间未过的面试场次。
+- `averageMatch`：实时计算，忽略没有技能要求的岗位；没有可计算岗位时为 `null`。
+- `conversion`：按岗位去重，结合当前状态和有效历史判断曾到达的阶段。UNDO 撤销的阶段不计入。
+- `interviewRate`：进入过面试的岗位数 ÷ 已投递岗位数；`offerRate`：获得过 Offer 的岗位数 ÷ 进入过面试的岗位数。分母为 0 时为 `null`。
+- 历史缺失时只根据当前阶段推断：面试和 Offer 视为已投，Offer 视为进入过面试；仅有挂了/辞退状态不猜测其此前阶段。
+- `matchDistribution`：`0-39`、`40-59`、`60-79`、`80-100` 四档；`unscoredJobs` 单独统计。
+- `recentJobs`：按更新时间降序，最多 5 条。数据通过同一数据库快照读取，不写入数据库。
+- 页面打开或点击刷新时请求，不进行后台实时轮询。
+
 ## 当前未实现的 API
 
 以下前端功能已有静态界面或数据结构，但后端尚无对应接口：
 
-- 仪表盘统计数据
 - 招聘 URL 解析
 - 注册后的邮箱验证、找回密码与第三方登录
