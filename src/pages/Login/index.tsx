@@ -39,7 +39,6 @@ export function Login() {
           password: "パスワード",
           passwordPlaceholder: "パスワードを入力",
           keep: "ログイン状態を保持",
-          forgot: "パスワードを忘れた場合",
           submit: "OfferPath を開く",
           demo: "デモアカウントで静的画面を確認できます。",
           registerPrompt: "アカウントをお持ちでないですか？",
@@ -60,7 +59,6 @@ export function Login() {
           password: "密码",
           passwordPlaceholder: "输入密码",
           keep: "保持登录",
-          forgot: "忘记密码？",
           submit: "进入 OfferPath",
           demo: "可使用演示账号查看静态页面。",
           registerPrompt: "还没有账号？",
@@ -211,9 +209,6 @@ export function Login() {
               />
               {text.keep}
             </label>
-            <button className="text-[10px] text-[#a994df]" type="button">
-              {text.forgot}
-            </button>
           </div>
           {registrationSucceeded && (
             <p
