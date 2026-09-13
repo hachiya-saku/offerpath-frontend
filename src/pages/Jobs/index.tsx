@@ -15,11 +15,7 @@ import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { getJobStatusLabel } from "@/i18n/jobLabels";
 import { getJobsAPI } from "@/api/jobs";
-import type {
-  Job as ApiJob,
-  JobListResponse,
-  JobListSort,
-} from "@/types/jobs";
+import type { Job as ApiJob, JobListResponse, JobListSort } from "@/types/jobs";
 import "./style.css";
 
 const filterLabelClass =
@@ -117,8 +113,7 @@ export function Jobs() {
           location: location === ALL ? undefined : location,
           salaryMin: salaryMin === "" ? undefined : Number(salaryMin),
           salaryMax: salaryMax === "" ? undefined : Number(salaryMax),
-          minimumMatch:
-            minimumMatch === "0" ? undefined : Number(minimumMatch),
+          minimumMatch: minimumMatch === "0" ? undefined : Number(minimumMatch),
           sort: sortMode,
         });
         if (!cancelled) {
@@ -171,6 +166,7 @@ export function Jobs() {
             : `${job.annualSalaryMin ?? ""}万〜${job.annualSalaryMax ?? ""}万円`,
         status: apiStatusToDisplay[job.status],
         match: job.matchScore ?? 0,
+        matchLabel: job.matchScore === null ? "—" : `${job.matchScore}%`,
         updatedAt: new Intl.DateTimeFormat(
           language === "ja" ? "ja-JP" : "zh-CN",
         ).format(new Date(job.updatedAt)),
@@ -182,9 +178,7 @@ export function Jobs() {
   );
 
   const platformOptions = useMemo(
-    () => [
-      ...new Set([...recruitmentPlatforms, ...filterOptions.platforms]),
-    ],
+    () => [...new Set([...recruitmentPlatforms, ...filterOptions.platforms])],
     [filterOptions.platforms],
   );
   const locations = filterOptions.locations;
@@ -487,7 +481,7 @@ export function Jobs() {
               </span>
             </span>
             <span className="match-cell">
-              <strong>{job.match}%</strong>
+              <strong>{job.matchLabel}</strong>
               <span className="mini-progress">
                 <i style={{ width: `${job.match}%` }} />
               </span>
@@ -549,9 +543,7 @@ export function Jobs() {
             size="icon"
             disabled={page >= pagination.totalPages || isLoading}
             onClick={() =>
-              setPage((current) =>
-                Math.min(pagination.totalPages, current + 1),
-              )
+              setPage((current) => Math.min(pagination.totalPages, current + 1))
             }
           >
             <ChevronRight size={17} />

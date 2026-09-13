@@ -659,12 +659,47 @@ type CreateInterviewRequest = {
 
 返回：`InterviewWithJob`
 
+## 个人技能与基础匹配度
+
+以下接口均需要 Access Token，仅能维护自己的技能。
+
+| 方法 | 路径 | 成功状态 | 返回 |
+| --- | --- | --- | --- |
+| GET | `/users/me/skills` | 200 | `{ items: UserSkill[], averageMatch: number \| null }` |
+| POST | `/users/me/skills` | 201 | `UserSkill` |
+| PATCH | `/users/me/skills/:id` | 200 | 更新后的 `UserSkill` |
+| DELETE | `/users/me/skills/:id` | 200 | `{ message: "Skill deleted" }` |
+
+```ts
+type SkillLevel = 'PROFICIENT' | 'INTERMEDIATE' | 'BEGINNER';
+type UserSkill = {
+  id: string; // 用户与技能的关联记录 ID，编辑/删除使用这个 ID
+  userId: string;
+  skillId: string;
+  name: string;
+  level: SkillLevel;
+  yearsLabel: string | null;
+  color: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+type CreateSkillRequest = {
+  name: string; // 必填，去除首尾和重复空格，最多 80 字符
+  level: SkillLevel;
+  yearsLabel?: string | null; // 最多 80 字符，null 清空
+};
+type UpdateSkillRequest = Partial<CreateSkillRequest>;
+```
+
+重复添加同名技能（不区分大小写）返回 `409`；访问他人的记录返回 `404`。
+必须技能权重为 2、加分技能为 1，熟练度系数为 1 / 0.6 / 0.3。
+匹配度为加权命中得分除以岗位满分，四舍五入为百分比。没有技能要求时返回 `null`，有要求但未命中时为 `0`。
+技能变更后会重新计算自己的岗位，不改变岗位更新时间。`averageMatch` 不计入没有技能要求的岗位；经验时长不参与计算。
+
 ## 当前未实现的 API
 
 以下前端功能已有静态界面或数据结构，但后端尚无对应接口：
 
-- 技能与个人技术栈 CRUD
-- 岗位技能匹配度计算
 - 仪表盘统计数据
 - 招聘 URL 解析
 - 注册后的邮箱验证、找回密码与第三方登录

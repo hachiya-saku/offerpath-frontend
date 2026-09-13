@@ -7,9 +7,7 @@ import {
   Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { skills } from "@/data/mockData";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { getExperienceLabel, getSkillLevelLabel } from "@/i18n/jobLabels";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getUserProfileAPI, updateUserProfileAPI } from "@/api/users";
@@ -17,6 +15,14 @@ import { useAppDispatch } from "@/store/hooks";
 import type { UserProfile, UpdateProfileRequest } from "@/types/auth";
 import { EditProfileDialog } from "./EditProfileDialog";
 import { updateCurrentUser } from "@/store/authSlice";
+import {
+  createSkillAPI,
+  deleteSkillAPI,
+  getSkillsAPI,
+  updateSkillAPI,
+} from "@/api/skills";
+import type { SkillInput, UserSkill } from "@/types/skills";
+import { EditSkillDialog } from "./EditSkillDialog";
 
 const skillTones: Record<string, string> = {
   purple: "bg-[#271d3b] text-[#b89cf6]",
@@ -28,9 +34,9 @@ const skillTones: Record<string, string> = {
 };
 
 const levelTones: Record<string, string> = {
-  熟练: "bg-[#142b27] text-[#68d8c2]",
-  一般: "bg-[#19223a] text-[#93a8ee]",
-  了解: "bg-[#252229] text-[#b0a9b6]",
+  PROFICIENT: "bg-[#142b27] text-[#68d8c2]",
+  INTERMEDIATE: "bg-[#19223a] text-[#93a8ee]",
+  BEGINNER: "bg-[#252229] text-[#b0a9b6]",
 };
 
 export function Profile() {
@@ -43,6 +49,66 @@ export function Profile() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const dispatch = useAppDispatch();
+  const [skills, setSkills] = useState<UserSkill[]>([]);
+  const [averageMatch, setAverageMatch] = useState<number | null>(null);
+  const [skillsError, setSkillsError] = useState(false);
+  const [skillDialogOpen, setSkillDialogOpen] = useState(false);
+  const [editingSkill, setEditingSkill] = useState<UserSkill | null>(null);
+  const [skillBusy, setSkillBusy] = useState(false);
+  const [skillError, setSkillError] = useState("");
+
+  const reloadSkills = async () => {
+    const response = await getSkillsAPI();
+    setSkills(response.data.items);
+    setAverageMatch(response.data.averageMatch);
+    setSkillsError(false);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    getSkillsAPI()
+      .then((response) => {
+        if (!cancelled) {
+          setSkills(response.data.items);
+          setAverageMatch(response.data.averageMatch);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSkillsError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const mutateSkill = async (action: () => Promise<unknown>) => {
+    setSkillBusy(true);
+    setSkillError("");
+    try {
+      await action();
+      setSkillDialogOpen(false);
+      try {
+        await reloadSkills();
+      } catch {
+        setSkillsError(true);
+      }
+    } catch {
+      setSkillError(
+        language === "ja"
+          ? "保存できませんでした。同じスキルが登録されていないか確認してください。"
+          : "操作失败，请检查是否已添加同名技能。 ",
+      );
+    } finally {
+      setSkillBusy(false);
+    }
+  };
+
+  const saveSkill = (data: SkillInput) =>
+    mutateSkill(() =>
+      editingSkill
+        ? updateSkillAPI(editingSkill.id, data)
+        : createSkillAPI(data),
+    );
 
   useEffect(() => {
     let cancelled = false;
@@ -123,9 +189,14 @@ export function Profile() {
   ].filter(Boolean).length;
   const completeness = `${Math.round((completedFields / 4) * 100)}%`;
   const profileStats = [
-    [text.skillCount, "6"],
-    [text.strongSkills, "2"],
-    [text.averageMatch, "78%"],
+    [text.skillCount, skillsError ? "—" : String(skills.length)],
+    [
+      text.strongSkills,
+      skillsError
+        ? "—"
+        : String(skills.filter((skill) => skill.level === "PROFICIENT").length),
+    ],
+    [text.averageMatch, averageMatch === null ? "—" : `${averageMatch}%`],
     [text.completeness, completeness],
   ];
 
@@ -203,6 +274,11 @@ export function Profile() {
           <Button
             className="h-[38px] rounded-[5px] bg-[#7c3aed] px-3.5 text-xs text-white hover:bg-[#8b4cf0]"
             type="button"
+            onClick={() => {
+              setEditingSkill(null);
+              setSkillError("");
+              setSkillDialogOpen(true);
+            }}
           >
             <Plus size={16} />
             {text.addSkill}
@@ -219,19 +295,19 @@ export function Profile() {
           </div>
           {skills.map((skill) => {
             const weight =
-              skill.level === "熟练"
+              skill.level === "PROFICIENT"
                 ? "100%"
-                : skill.level === "一般"
+                : skill.level === "INTERMEDIATE"
                   ? "60%"
                   : "30%";
             return (
               <div
                 className="grid min-h-[57px] min-w-[680px] grid-cols-[1.3fr_.8fr_.7fr_1fr_36px] items-center gap-3.5 border-b border-[#211e25] px-3 text-[10px] text-[#948e9d]"
-                key={skill.name}
+                key={skill.id}
               >
                 <span className="flex items-center gap-2.5">
                   <i
-                    className={`grid size-[29px] place-items-center rounded not-italic ${skillTones[skill.color]}`}
+                    className={`grid size-[29px] place-items-center rounded not-italic ${skillTones[skill.color ?? "purple"] ?? skillTones.purple}`}
                   >
                     <Code2 size={17} />
                   </i>
@@ -243,10 +319,18 @@ export function Profile() {
                   <span
                     className={`rounded px-2 py-1 text-[9px] ${levelTones[skill.level]}`}
                   >
-                    {getSkillLevelLabel(skill.level, language)}
+                    {skill.level === "PROFICIENT"
+                      ? language === "ja"
+                        ? "熟練"
+                        : "熟练"
+                      : skill.level === "INTERMEDIATE"
+                        ? "一般"
+                        : language === "ja"
+                          ? "基礎"
+                          : "了解"}
                   </span>
                 </span>
-                <span>{getExperienceLabel(skill.years, language)}</span>
+                <span>{skill.yearsLabel || "—"}</span>
                 <span className="flex items-center gap-2">
                   <span className="h-[3px] w-[65px] bg-[#2a2630]">
                     <i
@@ -255,9 +339,9 @@ export function Profile() {
                     />
                   </span>
                   <strong className="text-[9px] text-[#bbb5c1]">
-                    {skill.level === "熟练"
+                    {skill.level === "PROFICIENT"
                       ? "1.0"
-                      : skill.level === "一般"
+                      : skill.level === "INTERMEDIATE"
                         ? "0.6"
                         : "0.3"}
                   </strong>
@@ -268,12 +352,42 @@ export function Profile() {
                   size="icon"
                   type="button"
                   aria-label={`${text.edit} ${skill.name}`}
+                  onClick={() => {
+                    setEditingSkill(skill);
+                    setSkillError("");
+                    setSkillDialogOpen(true);
+                  }}
                 >
                   <Pencil size={15} />
                 </Button>
               </div>
             );
           })}
+          {(skillsError || skills.length === 0) && (
+            <p
+              role={skillsError ? "alert" : undefined}
+              className="py-6 text-center text-xs text-[#948e9d]"
+            >
+              {skillsError
+                ? language === "ja"
+                  ? "スキルを読み込めませんでした。"
+                  : "技能加载失败。"
+                : language === "ja"
+                  ? "スキル未登録"
+                  : "尚未添加技能"}
+              {skillsError && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    void reloadSkills().catch(() => setSkillsError(true))
+                  }
+                >
+                  {language === "ja" ? "再試行" : "重试"}
+                </Button>
+              )}
+            </p>
+          )}
         </div>
       </section>
 
@@ -294,6 +408,17 @@ export function Profile() {
         open={isEditOpen}
         profile={userProfile}
       />
+      {skillDialogOpen && (
+        <EditSkillDialog
+          skill={editingSkill}
+          language={language}
+          busy={skillBusy}
+          error={skillError}
+          onClose={() => setSkillDialogOpen(false)}
+          onSave={saveSkill}
+          onDelete={() => mutateSkill(() => deleteSkillAPI(editingSkill!.id))}
+        />
+      )}
     </div>
   );
 }

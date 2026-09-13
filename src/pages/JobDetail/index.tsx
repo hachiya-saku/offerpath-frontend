@@ -32,6 +32,8 @@ import {
 import { createInterviewAPI } from "@/api/interviews";
 import type { CreateInterviewRequest } from "@/types/interviews";
 import type { Job, JobStatus, JobStatusHistory } from "@/types/jobs";
+import { getSkillsAPI } from "@/api/skills";
+import type { UserSkill } from "@/types/skills";
 
 const interviewStatuses: CreateInterviewRequest["round"][] = [
   "FIRST_INTERVIEW",
@@ -131,6 +133,24 @@ export function JobDetail() {
   const { id } = useParams();
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [apiJob, setApiJob] = useState<Job | null>(null);
+  const [userSkills, setUserSkills] = useState<UserSkill[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getSkillsAPI()
+      .then((response) => {
+        if (!cancelled) setUserSkills(response.data.items);
+      })
+      .catch(() => {
+        if (!cancelled) setUserSkills(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const hasSkill = (name: string) =>
+    userSkills?.some(
+      (skill) => skill.name.toLowerCase() === name.toLowerCase(),
+    ) ?? false;
   const [statusHistory, setStatusHistory] = useState<JobStatusHistory[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
@@ -147,9 +167,7 @@ export function JobDetail() {
   useEffect(() => {
     if (!id) {
       setError(
-        language === "ja"
-          ? "求人IDを確認できません。"
-          : "无法确认岗位 ID。",
+        language === "ja" ? "求人IDを確認できません。" : "无法确认岗位 ID。",
       );
       return;
     }
@@ -289,9 +307,7 @@ export function JobDetail() {
   const currentStatus = apiJob.status;
   const availableStatuses = getAvailableInterviewStatuses(currentStatus);
   const canAdvance = ["WISHLIST", "APPLIED"].includes(currentStatus);
-  const canReject = !["OFFER", "REJECTED", "WITHDRAWN"].includes(
-    currentStatus,
-  );
+  const canReject = !["OFFER", "REJECTED", "WITHDRAWN"].includes(currentStatus);
   const canOffer = interviewStatuses.includes(
     currentStatus as CreateInterviewRequest["round"],
   );
@@ -314,7 +330,9 @@ export function JobDetail() {
             {apiJob.company.name.slice(0, 1)}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="m-0 text-[11px] text-[#948e9d]">{apiJob.company.name}</p>
+            <p className="m-0 text-[11px] text-[#948e9d]">
+              {apiJob.company.name}
+            </p>
             <h2 className="mb-1.5 mt-1 text-[27px] font-semibold">
               {apiJob.positionName}
             </h2>
@@ -419,7 +437,9 @@ export function JobDetail() {
           </div>
           <div className="grid gap-2 bg-[#0c0b0e] p-[15px]">
             <span className="text-[9px] text-[#6f6977]">{text.skillMatch}</span>
-            <strong className="text-[17px] text-[#2dd4bf]">{apiJob.matchScore ?? 0}%</strong>
+            <strong className="text-[17px] text-[#2dd4bf]">
+              {apiJob.matchScore === null ? "—" : `${apiJob.matchScore}%`}
+            </strong>
           </div>
           <div className="grid gap-2 bg-[#0c0b0e] p-[15px]">
             <span className="text-[9px] text-[#6f6977]">{text.salary}</span>
@@ -539,8 +559,14 @@ export function JobDetail() {
                 label={text.workingHours}
                 value={apiJob.workingHours ?? "-"}
               />
-              <DetailItem label={text.benefits} value={apiJob.benefits ?? "-"} />
-              <DetailItem label={text.holidays} value={apiJob.holidays ?? "-"} />
+              <DetailItem
+                label={text.benefits}
+                value={apiJob.benefits ?? "-"}
+              />
+              <DetailItem
+                label={text.holidays}
+                value={apiJob.holidays ?? "-"}
+              />
               <DetailItem
                 label={text.teamEnvironment}
                 value={apiJob.teamEnvironment ?? "-"}
@@ -556,7 +582,7 @@ export function JobDetail() {
                 </h3>
               </div>
               <span className="grid size-[43px] place-items-center rounded-full border-[3px] border-[#2dd4bf] text-xs font-bold text-[#70ddcf]">
-                {apiJob.matchScore ?? 0}%
+                {apiJob.matchScore === null ? "—" : `${apiJob.matchScore}%`}
               </span>
             </div>
             <div className="mt-[22px]">
@@ -566,10 +592,11 @@ export function JobDetail() {
               <div className="flex flex-wrap gap-[7px]">
                 {apiJob.requiredSkills.map((skill) => (
                   <span
-                    className="rounded-[3px] border border-[#265048] bg-[#142923] px-[9px] py-1.5 text-[10px] text-[#68d8c2]"
+                    className={`rounded-[3px] border px-[9px] py-1.5 text-[10px] ${hasSkill(skill) ? "border-[#265048] bg-[#142923] text-[#68d8c2]" : "border-[#49313a] bg-[#251a20] text-[#d7a5af]"}`}
                     key={skill}
                   >
-                    ✓ {skill}
+                    {userSkills === null ? "?" : hasSkill(skill) ? "✓" : "−"}{" "}
+                    {skill}
                   </span>
                 ))}
               </div>
@@ -579,12 +606,13 @@ export function JobDetail() {
                 {text.bonusSkills}
               </h4>
               <div className="flex flex-wrap gap-[7px]">
-                {apiJob.bonusSkills.map((skill, index) => (
+                {apiJob.bonusSkills.map((skill) => (
                   <span
-                    className={`rounded-[3px] border px-[9px] py-1.5 text-[10px] ${index === 0 ? "border-[#265048] bg-[#142923] text-[#68d8c2]" : "border-[#2c2831] bg-[#19171c] text-[#8c8692]"}`}
+                    className={`rounded-[3px] border px-[9px] py-1.5 text-[10px] ${hasSkill(skill) ? "border-[#265048] bg-[#142923] text-[#68d8c2]" : "border-[#2c2831] bg-[#19171c] text-[#8c8692]"}`}
                     key={skill}
                   >
-                    {index === 0 ? "✓" : "−"} {skill}
+                    {userSkills === null ? "?" : hasSkill(skill) ? "✓" : "−"}{" "}
+                    {skill}
                   </span>
                 ))}
               </div>
@@ -782,7 +810,8 @@ const detailCopy = {
     undoSuccess: "直前のステータスに戻しました。",
     interviewSaved: "面接を保存し、ステータスを更新しました。",
     statusError: "ステータスを更新できませんでした。",
-    historyError: "ステータスは更新されましたが、履歴を再取得できませんでした。",
+    historyError:
+      "ステータスは更新されましたが、履歴を再取得できませんでした。",
     interviewError: "面接を保存できませんでした。入力内容を確認してください。",
     undo: "取り消す",
     advanced: "進行",

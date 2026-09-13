@@ -30,12 +30,12 @@ Authentication, profiles, job CRUD, company data, interview management, and appl
 - Constrained status progression, rejected/offer outcomes, and step-by-step undo
 - Interview management with meeting details and Google Maps venue lookup
 - Persisted company directory, search, details, related jobs, and profile editing
-- Persisted personal profile editing and a sample technical skill inventory
+- Persisted personal profiles, skill CRUD, and proficiency-weighted job matching
 - Japanese / Chinese language switching with persisted preferences
 - Desktop sidebar and mobile drawer navigation
 - Responsive dark interface
 
-Jobs, companies, interviews, and profiles are persisted in PostgreSQL. Dashboard aggregation and personal skills currently use sample data.
+Jobs, companies, interviews, profiles, and skills are persisted in PostgreSQL. Dashboard aggregation currently uses sample data.
 
 ## Backend integration readiness
 
@@ -120,4 +120,4 @@ npm run preview  # Preview the production build
 
 ## Project status
 
-The main authentication, job, company, interview, and profile workflows use real APIs. Remaining MVP work centers on pagination, skills, dashboard metrics, URL parsing, and deployment.
+Authentication, paginated jobs, companies, interviews, profiles, skill CRUD, and matching use real APIs. Remaining MVP work centers on dashboard metrics, URL parsing, Japanese/Chinese verification, and deployment.
